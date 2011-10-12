@@ -15,13 +15,19 @@ from time import time
 from hashlib import md5
 from random import random
 
+def _random_key():
+    """Return random session key"""
+    i = md5()
+    i.update('%s%s' % (random(), time()))
+    return i.hexdigest()
+
 class Session(object):
     """Represents one session object stored in the session container.
     Derive from this object to store additional data.
     """
 
-    def __init__(self, session_id, expiry=None):
-        self.session_id = session_id
+    def __init__(self, session_id=None, expiry=None):
+        self.session_id = session_id or _random_key()
         self.promoted = None
         self.expiry = expiry
 
@@ -50,30 +56,17 @@ class Session(object):
                              self.session_id,
                              self.promoted or 0)
 
-def _random_key():
-    """Return random session key"""
-    i = md5()
-    i.update('%s%s' % (random(), time()))
-    return i.hexdigest()
-
 class SessionContainer(object):
     def __init__(self):
         self._items = dict()
         self._queue = []
 
-    def create(self, session, expiry=None, **kwargs):
-        """Create new session object."""
-        kwargs['session_id'] = _random_key()
-        kwargs['expiry'] = expiry
-
-        session = session(**kwargs)
-
+    def add(self, session):
+        # Add session to the container
         self._items[session.session_id] = session
 
         if expiry is not None:
             heappush(self._queue, session)
-
-        return session
 
     def get(self, session_id):
         """Return session object or None if it is not available"""

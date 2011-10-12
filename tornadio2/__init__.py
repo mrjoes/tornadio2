@@ -8,5 +8,3 @@
 """
 
 __version__ = (0, 0, 1)
-
-from tornadio.conn import SocketConnection

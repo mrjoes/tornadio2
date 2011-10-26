@@ -8,14 +8,17 @@ import tornadio2.conn
 
 ROOT = op.normpath(op.dirname(__file__))
 
+
 class IndexHandler(tornado.web.RequestHandler):
     """Regular HTTP handler to serve the chatroom page"""
     def get(self):
         self.render('index.html')
 
+
 class SocketIOHandler(tornado.web.RequestHandler):
     def get(self):
         self.render('socket.io.js')
+
 
 class ChatConnection(tornadio2.conn.SocketConnection):
     # Class level variable

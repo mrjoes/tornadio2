@@ -16,6 +16,7 @@ from tornado.httpserver import HTTPServer
 
 from tornadio2.flashserver import FlashPolicyServer
 
+
 class SocketServer(HTTPServer):
     """HTTP Server which does some configuration and automatic setup
     of Socket.IO based on configuration.
@@ -62,7 +63,7 @@ class SocketServer(HTTPServer):
                              flash_policy_port)
 
                 FlashPolicyServer(
-                    io_loop = io_loop,
+                    io_loop=io_loop,
                     port=flash_policy_port,
                     policy_file=flash_policy_file)
             except Exception, ex:

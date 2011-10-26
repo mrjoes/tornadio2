@@ -13,6 +13,7 @@ import logging
 import tornado
 from tornado.websocket import WebSocketHandler
 
+
 class TornadioWebSocketHandler(WebSocketHandler):
     def initialize(self, server):
         logging.debug('Initializing WebSocket handler...')
@@ -21,7 +22,7 @@ class TornadioWebSocketHandler(WebSocketHandler):
 
     def open(self, version, session_id):
         # TODO: Version check
-        self.session = server.get_session(session_id)
+        self.session = self.server.get_session(session_id)
         if self.session is None:
             raise tornado.HTTPError(404, "Invalid Session")
 
@@ -38,8 +39,9 @@ class TornadioWebSocketHandler(WebSocketHandler):
         for m in messages:
             self.write_message(m)
 
+
 class TornadioFlashSocketHandler(WebSocketHandler):
     def initialize(self, server):
         logging.debug('Initializing FlashSocket handler...')
 
-        super(FlashSocketHandler, self).initialize(server)
+        super(TornadioFlashSocketHandler, self).initialize(server)

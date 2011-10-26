@@ -15,11 +15,13 @@ from time import time
 from hashlib import md5
 from random import random
 
+
 def _random_key():
     """Return random session key"""
     i = md5()
     i.update('%s%s' % (random(), time()))
     return i.hexdigest()
+
 
 class Session(object):
     """Represents one session object stored in the session container.
@@ -55,6 +57,7 @@ class Session(object):
         return '%f %s %d' % (getattr(self, 'expiry_date', -1),
                              self.session_id,
                              self.promoted or 0)
+
 
 class SessionContainer(object):
     def __init__(self):

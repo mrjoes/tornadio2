@@ -15,6 +15,7 @@ from tornado.web import RequestHandler, HTTPError, asynchronous
 
 from tornadio2 import proto
 
+
 class TornadioPollingHandlerBase(RequestHandler):
     def initialize(self, server):
         self.server = server
@@ -54,12 +55,12 @@ class TornadioPollingHandlerBase(RequestHandler):
 
     def preflight(self):
         """Handles request authentication"""
-        if self.request.headers.has_key('Origin'):
+        if 'Origin' in self.request.headers:
             if self.verify_origin():
                 self.set_header('Access-Control-Allow-Origin',
                                 self.request.headers['Origin'])
 
-                if self.request.headers.has_key('Cookie'):
+                if 'Cookie' in self.request.headers:
                     self.set_header('Access-Control-Allow-Credentials', True)
 
                 return True
@@ -73,6 +74,7 @@ class TornadioPollingHandlerBase(RequestHandler):
         # TODO: Verify origin
         return True
 
+
 class TornadioXHRPollingSocketHandler(TornadioPollingHandlerBase):
     def initialize(self, server):
         super(TornadioXHRPollingSocketHandler, self).initialize(server)
@@ -82,13 +84,12 @@ class TornadioXHRPollingSocketHandler(TornadioPollingHandlerBase):
 
     @asynchronous
     def get(self, *args, **kwargs):
+        # TODO: Remove try/catch
         try:
+            # Assign handler
             if not self.session.set_handler(self):
-                # Check to avoid double connections
                 # TODO: Error logging
                 raise HTTPError(401, 'Forbidden')
-
-            print '1'
 
             if not self.session.send_queue:
                 self._timeout = self.server.io_loop.add_timeout(
@@ -96,17 +97,16 @@ class TornadioXHRPollingSocketHandler(TornadioPollingHandlerBase):
                     self._polling_timeout)
             else:
                 self.session.flush()
-
-            print 'done'
-        except Exception, p:
+        except Exception:
+            # TODO: What?
             import traceback
             traceback.print_exc()
-            print p
 
     def _polling_timeout(self):
         try:
             self.raw_send([proto.noop()])
         except Exception, p:
+            # TODO: Log error
             print p
         finally:
             self._detach()
@@ -115,8 +115,6 @@ class TornadioXHRPollingSocketHandler(TornadioPollingHandlerBase):
     def post(self, *args, **kwargs):
         if not self.preflight():
             raise HTTPError(401, 'unauthorized')
-
-        print 'POST'
 
         # Special case for IE XDomainRequest
         ctype = self.request.headers.get("Content-Type", "").split(";")[0]
@@ -128,8 +126,6 @@ class TornadioXHRPollingSocketHandler(TornadioPollingHandlerBase):
                 data = unquote(body[5:])
         else:
             data = self.request.body
-
-        print 'Data: ', repr(data)
 
         # Process packets one by one
         packets = proto.decode_frames(data)
@@ -154,8 +150,6 @@ class TornadioXHRPollingSocketHandler(TornadioPollingHandlerBase):
     def raw_send(self, raw_data):
         # Encode multiple messages as UTF-8 string
         data = proto.encode_frames(raw_data)
-
-        print repr(data)
 
         # Dump messages
         self.preflight()

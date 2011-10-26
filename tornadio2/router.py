@@ -8,8 +8,6 @@
     :copyright: (c) 2011 by the Serge S. Koval, see AUTHORS for more details.
     :license: Apache, see LICENSE for more details.
 """
-import logging
-
 from tornado import ioloop
 from tornado.web import RequestHandler, HTTPError
 
@@ -50,12 +48,12 @@ class HandshakeHandler(RequestHandler):
         if version != '1':
             raise HTTPError(503, "Invalid socket.io protocol version")
 
-        session = self.server.create_session()
+        sess = self.server.create_session()
 
         # TODO: Support for heartbeat
         # TODO: Fix heartbeat timeout
         data = '%s:%d:%d:%s' % (
-            session.session_id,
+            sess.session_id,
             25,
             self.server.settings['xhr_polling_timeout'] + 5,
             ','.join(t for t in self.server.settings.get('enabled_protocols'))
@@ -69,6 +67,7 @@ class HandshakeHandler(RequestHandler):
         # Session is considered to be opened, according to docs
         session.raw_send(proto.connect())
         session.open(*args, **kwargs)
+
 
 class TornadioServer(object):
     def __init__(self,
@@ -85,14 +84,16 @@ class TornadioServer(object):
         # Settings
         self.settings = DEFAULT_SETTINGS.copy()
         if user_settings:
-            settings.update(user_settings)
+            self.settings.update(user_settings)
 
         # Session
         self._sessions = session.SessionContainer()
 
         # Initialize transports
         self._transport_urls = [
-            (r'/%s/(?P<version>\d+)/$' % namespace, HandshakeHandler, dict(server=self))
+            (r'/%s/(?P<version>\d+)/$' % namespace,
+                HandshakeHandler,
+                dict(server=self))
             ]
 
         for t in self.settings.get('enabled_protocols', dict()):

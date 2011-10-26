@@ -6,9 +6,8 @@
     :copyright: (c) 2011 by the Serge S. Koval, see AUTHORS for more details.
     :license: Apache, see LICENSE for more details.
 """
-import logging, time
-
 from tornadio2 import session, proto
+
 
 class SocketConnection(object):
     def __init__(self, session, io_loop, endpoint=None):
@@ -43,6 +42,7 @@ class SocketConnection(object):
         """Forcibly close client connection"""
         self.session.close()
 
+
 class ConnectionSession(session.Session):
     def __init__(self, conn, io_loop, session_id=None, expiry=None):
         # Initialize session
@@ -70,7 +70,8 @@ class ConnectionSession(session.Session):
     # Add session
     def set_handler(self, handler, *args, **kwargs):
         if self.handler is not None:
-            raise Exception('Attempted to overwrite handler')
+            # Attempted to override handler
+            return False
 
         self.handler = handler
         self.promote()
@@ -133,7 +134,7 @@ class ConnectionSession(session.Session):
         elif msg_type == proto.MESSAGE:
             self.conn.on_message(msg_data)
         elif msg_type == proto.JSON:
-            self.conn.on_message(json.loads(msg_data))
+            self.conn.on_message(proto.json_load(msg_data))
         elif msg_type == proto.EVENT:
             self.raw_send(proto.error('', 'Not supported', ''))
         elif msg_type == proto.ACK:

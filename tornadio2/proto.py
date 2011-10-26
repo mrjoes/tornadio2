@@ -1,17 +1,26 @@
-from cStringIO import StringIO
+# -*- coding: utf-8 -*-
+"""
+    tornadio.proto
+    ~~~~~~~~~~~~~~
 
+    Socket.IO protocol related functions
+
+    :copyright: (c) 2011 by the Serge S. Koval, see AUTHORS for more details.
+    :license: Apache, see LICENSE for more details.
+"""
 try:
     import simplejson as json
-    json_decimal_args = {"use_decimal":True}
+    json_decimal_args = {"use_decimal": True}
 except ImportError:
     import json
     import decimal
+
     class DecimalEncoder(json.JSONEncoder):
         def default(self, o):
             if isinstance(o, decimal.Decimal):
                 return float(o)
             return super(DecimalEncoder, self).default(o)
-    json_decimal_args = {"cls":DecimalEncoder}
+    json_decimal_args = {"cls": DecimalEncoder}
 
 DISCONNECT = '0'
 CONNECT = '1'
@@ -25,15 +34,18 @@ NOOP = '8'
 
 FRAME_SEPARATOR = u'\ufffd'.encode('utf-8')
 
+
 def disconnect(endpoint=None):
     return '0::%s' % (
         endpoint or ''
         )
 
+
 def connect(endpoint=None):
     return '1::%s' % (
         endpoint or ''
         )
+
 
 def message(endpoint, msg, message_id=None):
     if (not isinstance(msg, (unicode, str)) and
@@ -54,6 +66,7 @@ def message(endpoint, msg, message_id=None):
             msg.encode('utf-8')
             )
 
+
 def event(endpoint, name, message_id=None, **kwargs):
     evt = dict(
         name=name,
@@ -72,11 +85,14 @@ def error(endpoint, reason, advice):
                             (reason or '').encode('utf-8'),
                             (advice or '').encode('utf-8'))
 
+
 def noop():
     return '8::'
 
+
 def json_load(msg):
     return json.loads(msg)
+
 
 def decode_frames(data):
     # Single message - nothing to decode here
@@ -92,15 +108,16 @@ def decode_frames(data):
 
         # Grab message length
         len_start = idx
-        idx = find(data, idx)
+        idx = data.find(idx)
         msg_len = int(data[len_start:idx])
-        idx += len(FRAME_SEPARATOR);
+        idx += len(FRAME_SEPARATOR)
 
         # Grab message
         msg_data = data[idx:idx + msg_len]
         idx += msg_len
 
         packets.append(msg_data)
+
 
 def encode_frames(packets):
     # No packets - return empty string

@@ -13,12 +13,12 @@ import logging
 from tornado import ioloop
 from tornado.web import RequestHandler, HTTPError
 
-from tornadio2 import conn, persistent, polling, session
+from tornadio2 import conn, persistent, polling, session, proto
 
 PROTOCOLS = {
     'websocket': persistent.TornadioWebSocketHandler,
     'flashsocket': persistent.TornadioFlashSocketHandler,
-    #'xhr-polling': polling.TornadioXHRPollingSocketHandler,
+    'xhr-polling': polling.TornadioXHRPollingSocketHandler,
     #'xhr-multipart': polling.TornadioXHRMultipartSocketHandler,
     #'htmlfile': polling.TornadioHtmlFileSocketHandler,
     #'jsonp-polling': polling.TornadioJSONPSocketHandler,
@@ -35,7 +35,7 @@ DEFAULT_SETTINGS = {
     # Enabled protocols
     #'enabled_protocols': ['websocket', 'flashsocket', 'xhr-multipart',
     #                      'xhr-polling', 'jsonp-polling', 'htmlfile'],
-    'enabled_protocols': ['websocket', 'flashsocket'],
+    'enabled_protocols': ['websocket', 'flashsocket', 'xhr-polling'],
     # XHR-Polling request timeout, in seconds
     'xhr_polling_timeout': 20,
     }
@@ -45,23 +45,37 @@ class HandshakeHandler(RequestHandler):
     def initialize(self, server):
         self.server = server
 
-    def get(self, version):
-        v = int(version)
-
+    def get(self, version, *args, **kwargs):
         # Only version 1 is supported now
-        if v != 1:
+        if version != '1':
             raise HTTPError(503, "Invalid socket.io protocol version")
 
         session = self.server.create_session()
 
-        # TODO: Support for heartbeat and close timeouts
-        return '%s::%s' % (
+        # TODO: Support for heartbeat
+        # TODO: Fix heartbeat timeout
+        data = '%s:%d:%d:%s' % (
             session.session_id,
+            25,
+            self.server.settings['xhr_polling_timeout'] + 5,
             ','.join(t for t in self.server.settings.get('enabled_protocols'))
             )
 
+        self.set_header('Content-Type', 'text/plain; charset=UTF-8')
+        #self.set_header('Content-Length', len(data))
+        self.write(data)
+        self.finish()
+
+        # Session is considered to be opened, according to docs
+        session.raw_send(proto.connect())
+        session.open(*args, **kwargs)
+
 class TornadioServer(object):
-    def __init__(connection, user_settings, namespace='socket.io', io_loop=None):
+    def __init__(self,
+                 connection,
+                 user_settings=dict(),
+                 namespace='socket.io',
+                 io_loop=None):
         # Store connection class
         self._connection = connection
 
@@ -78,7 +92,7 @@ class TornadioServer(object):
 
         # Initialize transports
         self._transport_urls = [
-            (r'/%s/(\d*)/$', HandshakeHandler, dict(server=self))
+            (r'/%s/(?P<version>\d+)/$' % namespace, HandshakeHandler, dict(server=self))
             ]
 
         for t in self.settings.get('enabled_protocols', dict()):
@@ -89,7 +103,10 @@ class TornadioServer(object):
                 continue
 
             self._transport_urls.append(
-                (r'/%s/(\d*)/%s/([^/]+)/', proto, dict(server=self))
+                (r'/%s/(?P<version>\d+)/%s/(?P<session_id>[^/]+)/?' %
+                    (namespace, t),
+                    proto,
+                    dict(server=self))
                 )
 
     @property
@@ -98,13 +115,15 @@ class TornadioServer(object):
 
     def create_session(self):
         # TODO: Possible optimization here for settings.get
-        conn = ConnectionSession(self._connection,
-                                 self.io_loop,
-                                 None,
-                                 self.settings.get('session_expiry')
-                                 )
+        session = conn.ConnectionSession(self._connection,
+                                         self.io_loop,
+                                         None,
+                                         self.settings.get('session_expiry')
+                                        )
 
-        self._sessions.add(conn)
+        self._sessions.add(session)
 
-        return conn
+        return session
 
+    def get_session(self, session_id):
+        return self._sessions.get(session_id)

@@ -13,9 +13,9 @@ import logging
 import tornado
 from tornado.websocket import WebSocketHandler
 
-class WebSocketHandler(WebSocketHandler):
+class TornadioWebSocketHandler(WebSocketHandler):
     def initialize(self, server):
-        logging.debug('Initializing FlashSocket handler...')
+        logging.debug('Initializing WebSocket handler...')
 
         self.server = server
 
@@ -34,11 +34,11 @@ class WebSocketHandler(WebSocketHandler):
         if self.session is not None:
             self.session.close()
 
-    def send(self, messages):
+    def raw_send(self, messages):
         for m in messages:
             self.write_message(m)
 
-class FlashSocketHandler(WebSocketHandler):
+class TornadioFlashSocketHandler(WebSocketHandler):
     def initialize(self, server):
         logging.debug('Initializing FlashSocket handler...')
 

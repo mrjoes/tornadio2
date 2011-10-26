@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+  <script src="socket.io.js"></script>
+  <script>WEB_SOCKET_SWF_LOCATION = 'http://cdn.socket.io/stable/WebSocketMain.swf';</script>
+  <script>
+    $(function() {
+      var sock = null;
+      function log(msg) {
+        var control = $('#log');
+        control.html(control.html() + msg + '<br/>');
+        control.scrollTop(control.scrollTop() + 1000);
+      }
+
+      function connect() {
+        disconnect();
+
+        var transports = $('#protocols input:checked').map(function(){
+            return $(this).attr('id');
+        });
+
+        sock = io.connect('http://localhost:8001', {
+                  transports: transports,
+                  rememberTransport: false
+               });
+
+        log('Connecting...');
+
+        sock.on('connect', function() {
+          log('Connected.');
+          update_ui();
+        });
+
+        sock.on('message', function(data) {
+          log('Received: ' + data);
+        });
+
+        sock.on('disconnect', function(data) {
+          log('Disconnected.');
+          sock = null;
+          update_ui();
+        });
+      }
+
+      function disconnect() {
+        if (sock != null) {
+          log('Disconnecting...');
+
+          sock.disconnect();
+          sock = null;
+
+          update_ui();
+        }
+      }
+
+      function update_ui() {
+        var msg = '';
+
+        if (sock == null || !sock.connected) {
+          msg = 'disconnected';
+          $('#connect').text('Connect');
+        } else {
+          msg = 'connected (' + sock.transport.type + ')';
+          $('#connect').text('Disconnect');
+        }
+
+        $('#status').text(msg);
+      }
+
+      $('#connect').click(function() {
+        if (sock == null) {
+          connect();
+        } else {
+          disconnect();
+        }
+
+        update_ui();
+        return false;
+      });
+
+      $('form').submit(function() {
+        if (sock != null) {
+          var text = $('#text');
+          log('Sending: ' + text.val());
+          sock.send(text.val());
+          text.val('').focus();
+        } else {
+          log('Connect first');
+        }
+        return false;
+      });
+    });
+</script>
+</head>
+<body>
+<h3>Protocol test!</h3>
+<div id="protocols" style="float: right">
+  <ul>
+    <li>
+      <input id="websocket" type="checkbox" value="WebSocket"></input>
+      <label for="websocket">websocket</label>
+    </li>
+    <li>
+      <input id="flashsocket" type="checkbox" value="FlashSocket"></input>
+      <label for="flashsocket">flashsocket</label>
+    </li>
+    <li>
+      <input id="xhr-multipart" type="checkbox" value="XHR-Multipart" checked="checked"></input>
+      <label for="xhr-multipart">xhr-multipart</label>
+    </li>
+    <li>
+      <input id="xhr-polling" type="checkbox" value="XHR-Polling" checked="checked"></input>
+      <label for="xhr-polling">xhr-polling</label>
+    </li>
+    <li>
+      <input id="htmlfile" type="checkbox" value="HtmlFile" checked="checked"></input>
+      <label for="htmlfile">htmlfile</label>
+    </li>
+    <li>
+      <input id="jsonp-polling" type="checkbox" value="JSONP Polling" checked="checked"></input>
+      <label for="jsonp-polling">jsonp-polling</label>
+    </li>
+  </ul>
+</div>
+<div>
+  <a id="connect" href="#">Connect</a>&nbsp;|&nbsp;Status: <span id="status">disconnected</span>
+</div>
+<div id="log" style="width: 60em; height: 20em; overflow:auto; border: 1px solid black">
+</div>
+<form id="chatform">
+  <input id="text" type="text" />
+  <input type="submit" />
+</form>
+</body>
+</html>

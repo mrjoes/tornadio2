@@ -65,7 +65,7 @@ class SessionContainer(object):
         # Add session to the container
         self._items[session.session_id] = session
 
-        if expiry is not None:
+        if session.expiry is not None:
             heappush(self._queue, session)
 
     def get(self, session_id):

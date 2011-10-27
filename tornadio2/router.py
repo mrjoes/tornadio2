@@ -16,10 +16,10 @@ from tornadio2 import conn, persistent, polling, session, proto
 PROTOCOLS = {
     'websocket': persistent.TornadioWebSocketHandler,
     'flashsocket': persistent.TornadioFlashSocketHandler,
-    'xhr-polling': polling.TornadioXHRPollingSocketHandler,
-    #'xhr-multipart': polling.TornadioXHRMultipartSocketHandler,
-    #'htmlfile': polling.TornadioHtmlFileSocketHandler,
-    #'jsonp-polling': polling.TornadioJSONPSocketHandler,
+    'xhr-polling': polling.TornadioXHRPollingHandler,
+    'xhr-multipart': polling.TornadioXHRMultipartHandler,
+    'htmlfile': polling.TornadioHtmlFileHandler,
+    'jsonp-polling': polling.TornadioJSONPHandler,
     }
 
 DEFAULT_SETTINGS = {
@@ -33,7 +33,7 @@ DEFAULT_SETTINGS = {
     # Enabled protocols
     #'enabled_protocols': ['websocket', 'flashsocket', 'xhr-multipart',
     #                      'xhr-polling', 'jsonp-polling', 'htmlfile'],
-    'enabled_protocols': ['websocket', 'flashsocket', 'xhr-polling'],
+    'enabled_protocols': ['websocket', 'flashsocket', 'xhr-polling', 'xhr-multipart'],
     # XHR-Polling request timeout, in seconds
     'xhr_polling_timeout': 20,
     }

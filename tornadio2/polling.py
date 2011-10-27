@@ -10,7 +10,6 @@
 """
 import time
 
-from urllib import unquote
 from tornado.web import RequestHandler, HTTPError, asynchronous
 
 from tornadio2 import proto
@@ -28,8 +27,6 @@ class TornadioPollingHandlerBase(RequestHandler):
             # TODO: clean me up
             raise HTTPError(401, 'Invalid session')
 
-        print 'Execute!'
-
         super(TornadioPollingHandlerBase, self)._execute(transforms,
                                                          *args, **kwargs)
 
@@ -40,8 +37,28 @@ class TornadioPollingHandlerBase(RequestHandler):
 
     @asynchronous
     def post(self, *args, **kwargs):
-        """Default POST handler."""
-        raise NotImplementedError()
+        if not self.preflight():
+            raise HTTPError(401, 'unauthorized')
+
+        data = self.request.body
+
+        # IE XDomainRequest support
+        if data.startswith('data='):
+            data = data(data[5:])
+
+        # Process packets one by one
+        packets = proto.decode_frames(data)
+        for p in packets:
+            try:
+                self.session.raw_message(p)
+            except Exception:
+                # TODO: Do what?
+                import traceback
+                traceback.print_exc()
+
+        self.set_header('Content-Type', 'text/plain; charset=UTF-8')
+        #self.write('')
+        self.finish()
 
     def raw_send(self, raw_data):
         """Called by the session when some data is available"""
@@ -75,16 +92,16 @@ class TornadioPollingHandlerBase(RequestHandler):
         return True
 
 
-class TornadioXHRPollingSocketHandler(TornadioPollingHandlerBase):
+class TornadioXHRPollingHandler(TornadioPollingHandlerBase):
     def initialize(self, server):
-        super(TornadioXHRPollingSocketHandler, self).initialize(server)
+        super(TornadioXHRPollingHandler, self).initialize(server)
 
         self._timeout = None
         self._timeout_interval = self.server.settings['xhr_polling_timeout']
 
     @asynchronous
     def get(self, *args, **kwargs):
-        # TODO: Remove try/catch after debugging it
+        # TODO: Remove try/catch
         try:
             # Assign handler
             if not self.session.set_handler(self):
@@ -98,50 +115,25 @@ class TornadioXHRPollingSocketHandler(TornadioPollingHandlerBase):
             else:
                 self.session.flush()
         except Exception:
-            # TODO: What?
+            # TODO: Do what?
             import traceback
             traceback.print_exc()
 
     def _polling_timeout(self):
         try:
             self.raw_send([proto.noop()])
-        except Exception, p:
-            # TODO: Log error
-            print p
+        except Exception:
+            # Silenty ignore noop - if connection was already closed,
+            # then ignore exception and silently detach
+            pass
         finally:
             self._detach()
 
-    @asynchronous
-    def post(self, *args, **kwargs):
-        if not self.preflight():
-            raise HTTPError(401, 'unauthorized')
-
-        # Special case for IE XDomainRequest
-        ctype = self.request.headers.get("Content-Type", "").split(";")[0]
-        if ctype == '':
-            data = None
-            body = self.request.body
-
-            if body.startswith('data='):
-                data = unquote(body[5:])
-        else:
-            data = self.request.body
-
-        print data
-
-        # Process packets one by one
-        packets = proto.decode_frames(data)
-        for p in packets:
-            try:
-                self.session.raw_message(p)
-            except Exception, ex:
-                print ex
-
-        self.set_header('Content-Type', 'text/plain; charset=UTF-8')
-        self.write('ok')
-        self.finish()
-
     def _detach(self):
+        if self._timeout:
+            self.server.io_loop.remove_timeout(self._timeout)
+            self.timeout = None
+
         if self.session:
             self.session.remove_handler(self)
             self.session = None
@@ -153,6 +145,8 @@ class TornadioXHRPollingSocketHandler(TornadioPollingHandlerBase):
         # Encode multiple messages as UTF-8 string
         data = proto.encode_frames(raw_data)
 
+        print 'sending %s' % self
+
         # Dump messages
         self.preflight()
         self.set_header('Content-Type', 'text/plain; charset=UTF-8')
@@ -163,3 +157,116 @@ class TornadioXHRPollingSocketHandler(TornadioPollingHandlerBase):
         self._detach()
 
         self.finish()
+
+
+class TornadioXHRMultipartHandler(TornadioPollingHandlerBase):
+    @asynchronous
+    def get(self, *args, **kwargs):
+        if not self.session.set_handler(self):
+            # TODO: Error logging
+            raise HTTPError(401, 'Forbidden')
+
+        self.set_header('Content-Type',
+                        'multipart/x-mixed-replace;boundary="socketio; charset=UTF-8"')
+        self.set_header('Connection', 'keep-alive')
+        self.write('--socketio\n')
+
+        # Dump any queued messages
+        self.session.flush()
+
+        # We need heartbeats
+        #self.session.reset_heartbeat()
+
+    def on_connection_close(self):
+        if self.session:
+            #self.session.stop_heartbeat()
+            self.session.remove_handler(self)
+
+    def raw_send(self, raw_data):
+        data = proto.encode_frames(raw_data)
+
+        self.preflight()
+        self.write("Content-Type: text/plain; charset=UTF-8\n\n")
+        self.write(data + '\n')
+        self.write('--socketio\n')
+        self.flush()
+
+        #self.session.delay_heartbeat()
+
+
+class TornadioHtmlFileHandler(TornadioPollingHandlerBase):
+    """IE HtmlFile protocol implementation.
+
+    Uses hidden frame to stream data from the server in one connection.
+
+    Unfortunately, it is unknown if this transport works, as socket.io
+    client-side fails in IE7/8.
+    """
+    @asynchronous
+    def get(self, *args, **kwargs):
+        if not self.session.set_handler(self):
+            raise HTTPError(401, 'Forbidden')
+
+        self.set_header('Content-Type', 'text/html; charset=UTF-8')
+        self.set_header('Connection', 'keep-alive')
+        self.set_header('Transfer-Encoding', 'chunked')
+        self.write('<html><body>%s' % (' ' * 244))
+
+        # Dump any queued messages
+        self.session.flush()
+
+        # We need heartbeats
+        #self.session.reset_heartbeat()
+
+    def on_connection_close(self):
+        if self.session:
+            #self.session.stop_heartbeat()
+            self.session.remove_handler(self)
+
+    def raw_send(self, raw_data):
+        data = proto.encode_frames(raw_data)
+
+        self.write(
+            '<script>parent.s_(%s),document);</script>' % proto.json_dumps(data)
+            )
+        self.flush()
+
+        #self.session.delay_heartbeat()
+
+
+class TornadioJSONPHandler(TornadioXHRPollingHandler):
+    def __init__(self, router, session_id):
+        self._index = None
+        super(TornadioJSONPHandler, self).__init__(router, session_id)
+
+    @asynchronous
+    def get(self, *args, **kwargs):
+        self._index = kwargs.get('jsonp_index', None)
+        super(TornadioJSONPHandler, self).get(*args, **kwargs)
+
+    @asynchronous
+    def post(self, *args, **kwargs):
+        self._index = kwargs.get('jsonp_index', None)
+        super(TornadioJSONPHandler, self).post(*args, **kwargs)
+
+    def send_raw(self, raw_data):
+        if not self._index:
+            raise HTTPError(401, 'unauthorized')
+
+        data = proto.encode_frames(raw_data)
+
+        message = 'io.JSONP[%s]._(%s);' % (
+            self._index,
+            proto.json_dumps(data)
+            )
+
+        self.preflight()
+        self.set_header("Content-Type", "text/javascript; charset=UTF-8")
+        self.set_header("Content-Length", len(message))
+        self.write(message)
+
+        # Detach connection
+        self._detach()
+
+        self.finish()
+

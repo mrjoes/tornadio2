@@ -90,6 +90,10 @@ def noop():
     return '8::'
 
 
+def json_dumps(msg):
+    return json.dumps(msg)
+
+
 def json_load(msg):
     return json.loads(msg)
 
@@ -103,7 +107,9 @@ def decode_frames(data):
     idx = 0
     packets = []
 
-    while data[idx:idx+len(FRAME_SEPARATOR)] == FRAME_SEPARATOR:
+    frame_len = len(FRAME_SEPARATOR)
+
+    while data[idx:idx + frame_len] == FRAME_SEPARATOR:
         idx += len(FRAME_SEPARATOR)
 
         # Grab message length
@@ -117,8 +123,6 @@ def decode_frames(data):
         idx += msg_len
 
         packets.append(msg_data)
-
-    print repr(packets)
 
     return packets
 

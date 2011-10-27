@@ -27,9 +27,16 @@ class ChatConnection(tornadio2.conn.SocketConnection):
     def on_open(self, *args, **kwargs):
         self.send("Welcome from the server.")
 
+        self.participants.add(self)
+
     def on_message(self, message):
         # Pong message back
-        self.send(message)
+        for p in self.participants:
+            p.send(message)
+
+    def on_close(self):
+        self.participants.remove(self)
+
 
 #use the routes classmethod to build the correct resource
 ChatServer = tornadio2.router.TornadioServer(ChatConnection)

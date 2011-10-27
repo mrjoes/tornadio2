@@ -54,8 +54,9 @@ class HandshakeHandler(RequestHandler):
         # TODO: Fix heartbeat timeout
         data = '%s:%d:%d:%s' % (
             sess.session_id,
-            5,
-            self.server.settings['xhr_polling_timeout'] + 5,
+            self.server.settings['heartbeat_interval'],
+            # TODO: Fix me somehow.
+            self.server.settings['xhr_polling_timeout'] + 3,
             ','.join(t for t in self.server.settings.get('enabled_protocols'))
             )
 
@@ -86,10 +87,16 @@ class TornadioServer(object):
         if user_settings:
             self.settings.update(user_settings)
 
-        # Session
+        # Sessions
         self._sessions = session.SessionContainer()
 
-        # Initialize transports
+        check_interval = self.settings['session_check_interval']
+        self._sessions_cleanup = ioloop.PeriodicCallback(self._sessions.expire,
+                                                         check_interval,
+                                                         self.io_loop)
+        self._sessions_cleanup.start()
+
+        # Initialize URLs
         self._transport_urls = [
             (r'/%s/(?P<version>\d+)/$' % namespace,
                 HandshakeHandler,
@@ -117,7 +124,7 @@ class TornadioServer(object):
     def create_session(self):
         # TODO: Possible optimization here for settings.get
         session = conn.ConnectionSession(self._connection,
-                                         self.io_loop,
+                                         self,
                                          None,
                                          self.settings.get('session_expiry')
                                         )

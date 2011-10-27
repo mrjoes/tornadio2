@@ -120,8 +120,10 @@ class TornadioXHRPollingHandler(TornadioPollingHandlerBase):
             traceback.print_exc()
 
     def _polling_timeout(self):
+        print 'Polling timeout, closing'
+
         try:
-            self.raw_send([proto.noop()])
+            self.finish()
         except Exception:
             # Silenty ignore noop - if connection was already closed,
             # then ignore exception and silently detach

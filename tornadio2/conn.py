@@ -8,8 +8,9 @@
 """
 from tornadio2 import session, proto, periodic
 
+
 class SocketConnection(object):
-    def __init__(self, session, io_loop, endpoint=None):
+    def __init__(self, session, endpoint=None):
         self.session = session
         self.endpoint = endpoint
 
@@ -34,7 +35,17 @@ class SocketConnection(object):
         `message`
             Message to send.
         """
-        self.session.send(self.endpoint, message)
+        self.session.send_message(proto.message(self.endpoint, message))
+
+    def emit(self, name, **kwargs):
+        """Send socket.io event
+
+        `name`
+            Name of the event
+        `kwargs`
+            Optional event parameters
+        """
+        self.session.send_message(proto.event(self.endpoint, name, **kwargs))
 
     def close(self):
         """Forcibly close client connection"""
@@ -42,22 +53,23 @@ class SocketConnection(object):
 
 
 class ConnectionSession(session.Session):
-    def __init__(self, conn, io_loop, session_id=None, expiry=None):
+    def __init__(self, conn, server, session_id=None, expiry=None):
         # Initialize session
         super(ConnectionSession, self).__init__(session_id, expiry)
 
-        self.io_loop = io_loop
+        self.server = server
         self.send_queue = []
         self.handler = None
 
         self.last_message_id = 0
 
         # Create connection instance
-        self.conn = conn(self, io_loop)
+        self.conn = conn(self)
 
         # Heartbeat related stuff
         self._heartbeat_timer = None
-        self._heartbeat_interval = 15*1000
+        self._heartbeat_interval = self.server.settings['heartbeat_interval'] * 1000
+        self._missed_heartbeats = 0
 
     def open(self, *args, **kwargs):
         self.conn.on_open(*args, **kwargs)
@@ -65,10 +77,12 @@ class ConnectionSession(session.Session):
     # Session callbacks
     def on_delete(self, forced):
         # Do not remove connection if it was not forced and there's running connection
-        if not forced and self._handler is not None and not self.is_closed:
+        if not forced and self.handler is not None and not self.is_closed:
             self.promote()
         else:
             self.close()
+
+        print 'Deleted'
 
     # Add session
     def set_handler(self, handler, *args, **kwargs):
@@ -88,9 +102,6 @@ class ConnectionSession(session.Session):
         self.handler = None
         self.promote()
 
-    def send(self, endpoint, msg):
-        self.send_message(proto.message(endpoint, msg))
-
     def send_message(self, pack):
         self.send_queue.append(pack)
         self.flush()
@@ -107,6 +118,8 @@ class ConnectionSession(session.Session):
         self.send_queue = []
 
     def close(self, endpoint=None):
+        print 'Close'
+
         if not self.conn.is_closed:
             try:
                 self.conn.on_close()
@@ -139,9 +152,13 @@ class ConnectionSession(session.Session):
             self._heartbeat_timer.delay()
 
     def _heartbeat(self):
-        print 'Sending heartbeat...'
-
         self.send_message(proto.heartbeat())
+
+        self._missed_heartbeats += 1
+
+        # TODO: Configurable
+        if self._missed_heartbeats > 5:
+            self.close()
 
     # Message handler
     def raw_message(self, msg):
@@ -158,7 +175,7 @@ class ConnectionSession(session.Session):
             self.send_message(proto.error('', 'Not supported', ''))
         elif msg_type == proto.HEARTBEAT:
             print 'HEARTBEAT'
-            #self.send_message(proto.error('', 'Not supported', ''))
+            self._missed_heartbeats = 0
         elif msg_type == proto.MESSAGE:
             self.conn.on_message(msg_data)
         elif msg_type == proto.JSON:

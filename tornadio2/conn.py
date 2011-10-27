@@ -6,14 +6,12 @@
     :copyright: (c) 2011 by the Serge S. Koval, see AUTHORS for more details.
     :license: Apache, see LICENSE for more details.
 """
-from tornadio2 import session, proto
-
+from tornadio2 import session, proto, periodic
 
 class SocketConnection(object):
     def __init__(self, session, io_loop, endpoint=None):
         self.session = session
         self.endpoint = endpoint
-        self.io_loop = io_loop
 
         self.is_closed = False
 
@@ -48,6 +46,7 @@ class ConnectionSession(session.Session):
         # Initialize session
         super(ConnectionSession, self).__init__(session_id, expiry)
 
+        self.io_loop = io_loop
         self.send_queue = []
         self.handler = None
 
@@ -55,6 +54,10 @@ class ConnectionSession(session.Session):
 
         # Create connection instance
         self.conn = conn(self, io_loop)
+
+        # Heartbeat related stuff
+        self._heartbeat_timer = None
+        self._heartbeat_interval = 15*1000
 
     def open(self, *args, **kwargs):
         self.conn.on_open(*args, **kwargs)
@@ -86,9 +89,9 @@ class ConnectionSession(session.Session):
         self.promote()
 
     def send(self, endpoint, msg):
-        self.raw_send(proto.message(endpoint, msg))
+        self.send_message(proto.message(endpoint, msg))
 
-    def raw_send(self, pack):
+    def send_message(self, pack):
         self.send_queue.append(pack)
         self.flush()
 
@@ -99,7 +102,7 @@ class ConnectionSession(session.Session):
         if not self.send_queue:
             return
 
-        self.handler.raw_send(self.send_queue)
+        self.handler.send_messages(self.send_queue)
 
         self.send_queue = []
 
@@ -111,12 +114,36 @@ class ConnectionSession(session.Session):
                 self.conn.is_closed = True
 
             # Send disconnection message
-            self.raw_send(proto.disconnect(endpoint))
+            self.send_message(proto.disconnect(endpoint))
 
     @property
     def is_closed(self):
         return self.conn.is_closed
 
+    # Heartbeats
+    def reset_heartbeat(self):
+        self.stop_heartbeat()
+
+        self._heartbeat_timer = periodic.Callback(self._heartbeat,
+                                                  self._heartbeat_interval,
+                                                  self.io_loop)
+        self._heartbeat_timer.start()
+
+    def stop_heartbeat(self):
+        if self._heartbeat_timer is not None:
+            self._heartbeat_timer.stop()
+            self._heartbeat_timer = None
+
+    def delay_heartbeat(self):
+        if self._heartbeat_timer is not None:
+            self._heartbeat_timer.delay()
+
+    def _heartbeat(self):
+        print 'Sending heartbeat...'
+
+        self.send_message(proto.heartbeat())
+
+    # Message handler
     def raw_message(self, msg):
         parts = msg.split(':')
 
@@ -128,18 +155,19 @@ class ConnectionSession(session.Session):
         if msg_type == proto.DISCONNECT:
             self.close()
         elif msg_type == proto.CONNECT:
-            self.raw_send(proto.error('', 'Not supported', ''))
+            self.send_message(proto.error('', 'Not supported', ''))
         elif msg_type == proto.HEARTBEAT:
-            self.raw_send(proto.error('', 'Not supported', ''))
+            print 'HEARTBEAT'
+            #self.send_message(proto.error('', 'Not supported', ''))
         elif msg_type == proto.MESSAGE:
             self.conn.on_message(msg_data)
         elif msg_type == proto.JSON:
             self.conn.on_message(proto.json_load(msg_data))
         elif msg_type == proto.EVENT:
-            self.raw_send(proto.error('', 'Not supported', ''))
+            self.send_message(proto.error('', 'Not supported', ''))
         elif msg_type == proto.ACK:
-            self.raw_send(proto.error('', 'Not supported', ''))
+            self.send_message(proto.error('', 'Not supported', ''))
         elif msg_type == proto.ERROR:
-            self.raw_send(proto.error('', 'Not supported', ''))
+            self.send_message(proto.error('', 'Not supported', ''))
         elif msg_type == proto.NOOP:
             pass

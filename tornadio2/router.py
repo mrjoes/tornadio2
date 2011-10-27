@@ -54,7 +54,7 @@ class HandshakeHandler(RequestHandler):
         # TODO: Fix heartbeat timeout
         data = '%s:%d:%d:%s' % (
             sess.session_id,
-            25,
+            5,
             self.server.settings['xhr_polling_timeout'] + 5,
             ','.join(t for t in self.server.settings.get('enabled_protocols'))
             )
@@ -65,7 +65,7 @@ class HandshakeHandler(RequestHandler):
         self.finish()
 
         # Session is considered to be opened, according to docs
-        sess.raw_send(proto.connect())
+        sess.send_message(proto.connect())
         sess.open(*args, **kwargs)
 
 

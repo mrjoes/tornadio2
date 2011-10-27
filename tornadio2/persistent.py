@@ -27,15 +27,23 @@ class TornadioWebSocketHandler(WebSocketHandler):
             raise tornado.HTTPError(404, "Invalid Session")
 
         self.session.set_handler(self)
+        self.session.reset_heartbeat()
+
+        # Flush messages, if any
+        self.session.flush()
 
     def on_message(self, message):
+        print 'on_msg'
+        print message
+
         self.async_callback(self.session.raw_message)(message)
 
     def on_close(self):
         if self.session is not None:
-            self.session.close()
+            self.session.stop_heartbeat()
+            self.session.remove_handler(self)
 
-    def raw_send(self, messages):
+    def send_messages(self, messages):
         for m in messages:
             self.write_message(m)
 

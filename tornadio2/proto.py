@@ -47,6 +47,10 @@ def connect(endpoint=None):
         )
 
 
+def heartbeat():
+    return '2::'
+
+
 def message(endpoint, msg, message_id=None):
     if (not isinstance(msg, (unicode, str)) and
         isinstance(msg, (object, dict))):

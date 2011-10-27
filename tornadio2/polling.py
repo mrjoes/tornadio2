@@ -60,7 +60,7 @@ class TornadioPollingHandlerBase(RequestHandler):
         #self.write('')
         self.finish()
 
-    def raw_send(self, raw_data):
+    def send_messages(self, messages):
         """Called by the session when some data is available"""
         raise NotImplementedError()
 
@@ -130,7 +130,7 @@ class TornadioXHRPollingHandler(TornadioPollingHandlerBase):
             self._detach()
 
     def _detach(self):
-        if self._timeout:
+        if self._timeout is not None:
             self.server.io_loop.remove_timeout(self._timeout)
             self.timeout = None
 
@@ -141,21 +141,20 @@ class TornadioXHRPollingHandler(TornadioPollingHandlerBase):
     def on_connection_close(self):
         self._detach()
 
-    def raw_send(self, raw_data):
+    def send_messages(self, messages):
         # Encode multiple messages as UTF-8 string
-        data = proto.encode_frames(raw_data)
+        data = proto.encode_frames(messages)
 
-        print 'sending %s' % self
-
-        # Dump messages
+        # Send data to client
         self.preflight()
         self.set_header('Content-Type', 'text/plain; charset=UTF-8')
         self.set_header('Content-Length', len(data))
         self.write(data)
 
-        # Detach connection
+        # Detach connection from session
         self._detach()
 
+        # Close connection
         self.finish()
 
 
@@ -182,8 +181,8 @@ class TornadioXHRMultipartHandler(TornadioPollingHandlerBase):
             #self.session.stop_heartbeat()
             self.session.remove_handler(self)
 
-    def raw_send(self, raw_data):
-        data = proto.encode_frames(raw_data)
+    def send_messages(self, messages):
+        data = proto.encode_frames(messages)
 
         self.preflight()
         self.write("Content-Type: text/plain; charset=UTF-8\n\n")
@@ -223,8 +222,8 @@ class TornadioHtmlFileHandler(TornadioPollingHandlerBase):
             #self.session.stop_heartbeat()
             self.session.remove_handler(self)
 
-    def raw_send(self, raw_data):
-        data = proto.encode_frames(raw_data)
+    def send_messages(self, messages):
+        data = proto.encode_frames(messages)
 
         self.write(
             '<script>parent.s_(%s),document);</script>' % proto.json_dumps(data)
@@ -249,11 +248,11 @@ class TornadioJSONPHandler(TornadioXHRPollingHandler):
         self._index = kwargs.get('jsonp_index', None)
         super(TornadioJSONPHandler, self).post(*args, **kwargs)
 
-    def send_raw(self, raw_data):
+    def send_raw(self, messages):
         if not self._index:
             raise HTTPError(401, 'unauthorized')
 
-        data = proto.encode_frames(raw_data)
+        data = proto.encode_frames(messages)
 
         message = 'io.JSONP[%s]._(%s);' % (
             self._index,

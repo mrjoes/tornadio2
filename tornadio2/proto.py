@@ -103,12 +103,12 @@ def decode_frames(data):
     idx = 0
     packets = []
 
-    while data[idx:len(FRAME_SEPARATOR)] == FRAME_SEPARATOR:
+    while data[idx:idx+len(FRAME_SEPARATOR)] == FRAME_SEPARATOR:
         idx += len(FRAME_SEPARATOR)
 
         # Grab message length
         len_start = idx
-        idx = data.find(idx)
+        idx = data.find(FRAME_SEPARATOR, idx)
         msg_len = int(data[len_start:idx])
         idx += len(FRAME_SEPARATOR)
 
@@ -117,6 +117,10 @@ def decode_frames(data):
         idx += msg_len
 
         packets.append(msg_data)
+
+    print repr(packets)
+
+    return packets
 
 
 def encode_frames(packets):

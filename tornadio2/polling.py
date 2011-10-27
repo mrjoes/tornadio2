@@ -84,7 +84,7 @@ class TornadioXHRPollingSocketHandler(TornadioPollingHandlerBase):
 
     @asynchronous
     def get(self, *args, **kwargs):
-        # TODO: Remove try/catch
+        # TODO: Remove try/catch after debugging it
         try:
             # Assign handler
             if not self.session.set_handler(self):
@@ -126,6 +126,8 @@ class TornadioXHRPollingSocketHandler(TornadioPollingHandlerBase):
                 data = unquote(body[5:])
         else:
             data = self.request.body
+
+        print data
 
         # Process packets one by one
         packets = proto.decode_frames(data)

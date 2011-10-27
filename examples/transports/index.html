@@ -84,6 +84,9 @@
           var text = $('#text');
           log('Sending: ' + text.val());
           sock.send(text.val());
+          sock.send(text.val());
+          sock.send(text.val());
+          sock.send(text.val());
           text.val('').focus();
         } else {
           log('Connect first');

@@ -65,8 +65,8 @@ class HandshakeHandler(RequestHandler):
         self.finish()
 
         # Session is considered to be opened, according to docs
-        session.raw_send(proto.connect())
-        session.open(*args, **kwargs)
+        sess.raw_send(proto.connect())
+        sess.open(*args, **kwargs)
 
 
 class TornadioServer(object):

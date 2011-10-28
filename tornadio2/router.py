@@ -11,7 +11,7 @@
 from tornado import ioloop
 from tornado.web import RequestHandler, HTTPError
 
-from tornadio2 import conn, persistent, polling, session, proto
+from tornadio2 import persistent, polling, sessioncontainer, session
 
 PROTOCOLS = {
     'websocket': persistent.TornadioWebSocketHandler,
@@ -66,7 +66,6 @@ class HandshakeHandler(RequestHandler):
         self.finish()
 
         # Session is considered to be opened, according to docs
-        sess.send_message(proto.connect())
         sess.open(*args, **kwargs)
 
 
@@ -88,7 +87,7 @@ class TornadioServer(object):
             self.settings.update(user_settings)
 
         # Sessions
-        self._sessions = session.SessionContainer()
+        self._sessions = sessioncontainer.SessionContainer()
 
         check_interval = self.settings['session_check_interval']
         self._sessions_cleanup = ioloop.PeriodicCallback(self._sessions.expire,
@@ -123,15 +122,15 @@ class TornadioServer(object):
 
     def create_session(self):
         # TODO: Possible optimization here for settings.get
-        session = conn.ConnectionSession(self._connection,
-                                         self,
-                                         None,
-                                         self.settings.get('session_expiry')
-                                        )
+        s = session.Session(self._connection,
+                            self,
+                            None,
+                            self.settings.get('session_expiry')
+                            )
 
-        self._sessions.add(session)
+        self._sessions.add(s)
 
-        return session
+        return s
 
     def get_session(self, session_id):
         return self._sessions.get(session_id)

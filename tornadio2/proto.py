@@ -84,7 +84,7 @@ def event(endpoint, name, message_id=None, **kwargs):
     )
 
 
-def error(endpoint, reason, advice):
+def error(endpoint, reason, advice=None):
     return '7::%s:%s+%s' % (endpoint or '',
                             (reason or '').encode('utf-8'),
                             (advice or '').encode('utf-8'))

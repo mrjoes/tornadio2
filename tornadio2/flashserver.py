@@ -17,6 +17,7 @@ import functools
 
 from tornado import iostream
 
+
 class FlashPolicyServer(object):
     """Flash Policy server, listens on port 843 by default (useless otherwise)
     """

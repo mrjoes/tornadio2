@@ -1,128 +1,205 @@
-# -*- coding: utf-8 -*-
-"""
-    tornadio2.session
-    ~~~~~~~~~~~~~~~~~
+import urlparse
 
-    Simple heapq-based session implementation with sliding expiration window
-    support.
-
-    :copyright: (c) 2011 by the Serge S. Koval, see AUTHORS for more details.
-    :license: Apache, see LICENSE for more details.
-"""
-
-from heapq import heappush, heappop
-from time import time
-from hashlib import md5
-from random import random
+from tornadio2 import sessioncontainer, proto, periodic
 
 
-def _random_key():
-    """Return random session key"""
-    i = md5()
-    i.update('%s%s' % (random(), time()))
-    return i.hexdigest()
+class Session(sessioncontainer.SessionBase):
+    def __init__(self, conn, server, session_id=None, expiry=None):
+        # Initialize session
+        super(Session, self).__init__(session_id, expiry)
 
+        self.server = server
+        self.send_queue = []
+        self.handler = None
 
-class Session(object):
-    """Represents one session object stored in the session container.
-    Derive from this object to store additional data.
-    """
+        self.last_message_id = 0
 
-    def __init__(self, session_id=None, expiry=None):
-        self.session_id = session_id or _random_key()
-        self.promoted = None
-        self.expiry = expiry
+        # Create connection instance
+        self.conn = conn(self)
+        self.send_message(proto.connect())
 
-        if self.expiry is not None:
-            self.expiry_date = time() + self.expiry
+        # Heartbeat related stuff
+        self._heartbeat_timer = None
+        self._heartbeat_interval = self.server.settings['heartbeat_interval'] * 1000
+        self._missed_heartbeats = 0
 
-    def is_alive(self):
-        return self.expiry_date > time()
+        # Endpoints
+        self.endpoints = dict()
 
-    def promote(self):
-        """Mark object as alive, so it won't be collected during next
-        run of the garbage collector.
-        """
-        if self.expiry is not None:
-            self.promoted = time() + self.expiry
+    def open(self, *args, **kwargs):
+        self.conn.on_open(*args, **kwargs)
 
+    # Session callbacks
     def on_delete(self, forced):
-        """Triggered when object was expired or deleted."""
-        pass
+        # Do not remove connection if it was not forced and there's running connection
+        if not forced and self.handler is not None and not self.is_closed:
+            self.promote()
+        else:
+            self.close()
 
-    def __cmp__(self, other):
-        return cmp(self.expiry_date, other.expiry_date)
+    # Add session
+    def set_handler(self, handler, *args, **kwargs):
+        if self.handler is not None:
+            # Attempted to override handler
+            return False
 
-    def __repr__(self):
-        return '%f %s %d' % (getattr(self, 'expiry_date', -1),
-                             self.session_id,
-                             self.promoted or 0)
+        self.handler = handler
+        self.promote()
 
+        return True
 
-class SessionContainer(object):
-    def __init__(self):
-        self._items = dict()
-        self._queue = []
+    def remove_handler(self, handler):
+        if self.handler != handler:
+            raise Exception('Attempted to remove invalid handler')
 
-    def add(self, session):
-        # Add session to the container
-        self._items[session.session_id] = session
+        self.handler = None
+        self.promote()
 
-        if session.expiry is not None:
-            heappush(self._queue, session)
+    def send_message(self, pack):
+        print '<<<', pack
 
-    def get(self, session_id):
-        """Return session object or None if it is not available"""
-        return self._items.get(session_id, None)
+        self.send_queue.append(pack)
+        self.flush()
 
-    def remove(self, session_id):
-        """Remove session object from the container"""
-        session = self._items.get(session_id, None)
-
-        if session is not None:
-            self._items[session].promoted = -1
-            session.on_delete(True)
-            del self._items[session_id]
-            return True
-
-        return False
-
-    def expire(self, current_time=None):
-        """Expire any old entries"""
-        if not self._queue:
+    def flush(self):
+        if self.handler is None:
             return
 
-        if current_time is None:
-            current_time = time()
+        if not self.send_queue:
+            return
 
-        while self._queue:
-            # Top most item is not expired yet
-            top = self._queue[0]
+        self.handler.send_messages(self.send_queue)
 
-            # Early exit if item was not promoted and its expiration time
-            # is greater than now.
-            if top.promoted is None and top.expiry_date > current_time:
-                break
+        self.send_queue = []
 
-            # Pop item from the stack
-            top = heappop(self._queue)
+    # Close connection with all endpoints or just one endpoint
+    def close(self, endpoint):
+        if not endpoint:
+            if not self.conn.is_closed:
+                # Close child connections
+                for k in self.endpoints.iterkeys():
+                    self.disconnect_endpoint(k)
 
-            need_reschedule = (top.promoted is not None
-                               and top.promoted > current_time)
+                # Close parent connections
+                try:
+                    self.conn.on_close()
+                finally:
+                    self.conn.is_closed = True
 
-            # Give chance to reschedule
-            if not need_reschedule:
-                top.promoted = None
-                top.on_delete(False)
+                # Send disconnection message
+                self.send_message(proto.disconnect())
+        else:
+            self.disconnect_endpoint(endpoint)
 
-                need_reschedule = (top.promoted is not None
-                                   and top.promoted > current_time)
+    @property
+    def is_closed(self):
+        return self.conn.is_closed
 
-            # If item is promoted and expiration time somewhere in future
-            # just reschedule it
-            if need_reschedule:
-                top.expiry_date = top.promoted
-                top.promoted = None
-                heappush(self._queue, top)
+    # Heartbeats
+    def reset_heartbeat(self):
+        self.stop_heartbeat()
+
+        self._heartbeat_timer = periodic.Callback(self._heartbeat,
+                                                  self._heartbeat_interval,
+                                                  self.io_loop)
+        self._heartbeat_timer.start()
+
+    def stop_heartbeat(self):
+        if self._heartbeat_timer is not None:
+            self._heartbeat_timer.stop()
+            self._heartbeat_timer = None
+
+    def delay_heartbeat(self):
+        if self._heartbeat_timer is not None:
+            self._heartbeat_timer.delay()
+
+    def _heartbeat(self):
+        self.send_message(proto.heartbeat())
+
+        self._missed_heartbeats += 1
+
+        # TODO: Configurable
+        if self._missed_heartbeats > 5:
+            self.close()
+
+    # Endpoints
+    def connect_endpoint(self, url):
+        urldata = urlparse.urlparse(url)
+
+        endpoint = urldata.path
+
+        conn_class = self.conn.get_endpoint(endpoint)
+        if conn_class is None:
+            self.send_message(proto.error(None, 'Invalid endpoint %s' % endpoint))
+            return
+
+        conn = conn_class(self, endpoint)
+        self.endpoints[endpoint] = conn
+
+        self.send_message(proto.connect(endpoint))
+
+        conn.on_open()
+
+    def disconnect_endpoint(self, endpoint):
+        if endpoint not in self.endpoints:
+            self.send_message(proto.error(None, 'Invalid endpoint %s' % endpoint))
+            return
+
+        conn = self.endpoints[endpoint]
+
+        del self.endpoints[endpoint]
+
+        conn.on_close()
+        self.send_message(proto.disconnect(endpoint))
+
+    def get_connection(self, endpoint):
+        if endpoint is not None:
+            return self.endpoints.get(endpoint)
+        else:
+            return self.conn
+
+    # Message handler
+    def raw_message(self, msg):
+        print '>>>', msg
+
+        parts = msg.split(':')
+
+        msg_type = parts[0]
+        msg_id = parts[1]
+        msg_endpoint = parts[2]
+        msg_data = ':'.join(parts[3:])
+
+        if msg_type == proto.DISCONNECT:
+            if not msg_endpoint:
+                self.close()
             else:
-                del self._items[top.session_id]
+                self.disconnect_endpoint(msg_endpoint)
+        elif msg_type == proto.CONNECT:
+            if msg_endpoint:
+                self.connect_endpoint(msg_endpoint)
+            else:
+                # TODO: Error logging
+                print 'Invalid connect without endpoint'
+        elif msg_type == proto.HEARTBEAT:
+            print 'HEARTBEAT'
+            self._missed_heartbeats = 0
+        elif msg_type == proto.MESSAGE:
+            conn = self.get_connection(msg_endpoint)
+            if conn is not None:
+                conn.on_message(msg_data)
+            else:
+                print 'Invalid endpoint %s' % msg_endpoint
+        elif msg_type == proto.JSON:
+            conn = self.get_connection(msg_endpoint)
+            if conn is not None:
+                conn.on_message(proto.json_load(msg_data))
+            else:
+                print 'Invalid endpoint %s' % msg_endpoint
+        elif msg_type == proto.EVENT:
+            self.send_message(proto.error('', 'Not supported', ''))
+        elif msg_type == proto.ACK:
+            self.send_message(proto.error('', 'Not supported', ''))
+        elif msg_type == proto.ERROR:
+            self.send_message(proto.error('', 'Not supported', ''))
+        elif msg_type == proto.NOOP:
+            pass

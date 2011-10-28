@@ -5,8 +5,9 @@
   <script src="socket.io.js"></script>
   <script>WEB_SOCKET_SWF_LOCATION = 'http://cdn.socket.io/stable/WebSocketMain.swf';</script>
   <script>
+    var chat = null, ping = null;
     $(function() {
-      var sock = null;
+
       function log(msg) {
         var control = $('#log');
         control.html(control.html() + msg + '<br/>');
@@ -20,35 +21,51 @@
             return $(this).attr('id');
         });
 
-        sock = io.connect('http://localhost:8001', {
+        chat = io.connect('http://localhost:8001/chat', {
                   transports: transports,
                   rememberTransport: false
                });
+        ping = io.connect('http://localhost:8001/ping', {
+                  transports: transports,
+                  rememberTransport: false
+        });
 
         log('Connecting...');
 
-        sock.on('connect', function() {
-          log('Connected.');
+        chat.on('connect', function() {
+          log('Chat Connected.');
           update_ui();
         });
 
-        sock.on('message', function(data) {
-          log('Received: ' + data);
+        chat.on('message', function(data) {
+          log('Chat Received: ' + data);
         });
 
-        sock.on('disconnect', function(data) {
-          log('Disconnected.');
+        chat.on('disconnect', function(data) {
+          log('Chat Disconnected.');
           sock = null;
           update_ui();
+        });
+
+        ping.on('connect', function() {
+          log('Ping Connected');
+        });
+
+        ping.on('message', function(data) {
+          log('Ping Received: ' + data);
+        });
+
+        ping.on('disconnect', function(data) {
+          log('Ping Disconnected');
         });
       }
 
       function disconnect() {
-        if (sock != null) {
+        if (chat != null) {
           log('Disconnecting...');
 
-          sock.disconnect();
-          sock = null;
+          chat.disconnect();
+          chat = null;
 
           update_ui();
         }
@@ -57,11 +74,11 @@
       function update_ui() {
         var msg = '';
 
-        if (sock == null || !sock.connected) {
+        if (chat == null || !chat.connected) {
           msg = 'disconnected';
           $('#connect').text('Connect');
         } else {
-          msg = 'connected (' + sock.transport.type + ')';
+          msg = 'connected (' + chat.transport.type + ')';
           $('#connect').text('Disconnect');
         }
 
@@ -69,7 +86,7 @@
       }
 
       $('#connect').click(function() {
-        if (sock == null) {
+        if (chat == null) {
           connect();
         } else {
           disconnect();
@@ -80,17 +97,11 @@
       });
 
       $('form').submit(function() {
-        if (sock != null) {
-          var text = $('#text');
-          log('Sending: ' + text.val());
-          sock.send(text.val());
-          sock.send(text.val());
-          sock.send(text.val());
-          sock.send(text.val());
-          text.val('').focus();
-        } else {
-          log('Connect first');
-        }
+        var text = $('#text').val();
+        log('Sending: ' + text);
+        chat.send(text);
+        ping.send(text);
+        $('#text').val('').focus();
         return false;
       });
     });

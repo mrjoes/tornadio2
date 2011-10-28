@@ -33,9 +33,13 @@ class ChatConnection(tornadio2.conn.SocketConnection):
         # Pong message back
         for p in self.participants:
             p.send(message)
+        self.close()
 
     def on_close(self):
         self.participants.remove(self)
+
+    def get_endpoint(self, endpoint):
+        return ChatConnection
 
 
 #use the routes classmethod to build the correct resource

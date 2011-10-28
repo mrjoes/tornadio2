@@ -136,6 +136,7 @@ def decode_frames(data):
     return packets
 
 
+# Encode expects packets in UTF-8 encoding
 def encode_frames(packets):
     # No packets - return empty string
     if not packets:

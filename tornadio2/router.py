@@ -109,8 +109,9 @@ class TornadioServer(object):
                 # TODO: Error logging
                 continue
 
+            # Only version 1 is supported
             self._transport_urls.append(
-                (r'/%s/(?P<version>\d+)/%s/(?P<session_id>[^/]+)/?' %
+                (r'/%s/1/%s/(?P<session_id>[^/]+)/?' %
                     (namespace, t),
                     proto,
                     dict(server=self))

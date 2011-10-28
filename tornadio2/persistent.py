@@ -20,7 +20,7 @@ class TornadioWebSocketHandler(WebSocketHandler):
 
         self.server = server
 
-    def open(self, version, session_id):
+    def open(self, session_id):
         # TODO: Version check
         self.session = self.server.get_session(session_id)
         if self.session is None:

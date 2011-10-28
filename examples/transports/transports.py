@@ -24,6 +24,9 @@ class ChatConnection(tornadio2.conn.SocketConnection):
     # Class level variable
     participants = set()
 
+    def ack(self, message, extra):
+        print 'GOT ACK!'
+
     def on_open(self, *args, **kwargs):
         self.send("Welcome from the server.")
 
@@ -32,8 +35,7 @@ class ChatConnection(tornadio2.conn.SocketConnection):
     def on_message(self, message):
         # Pong message back
         for p in self.participants:
-            p.send(message)
-        self.close()
+            p.send(message, self.ack)
 
     def on_close(self):
         self.participants.remove(self)

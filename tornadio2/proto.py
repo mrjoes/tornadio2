@@ -84,6 +84,11 @@ def event(endpoint, name, message_id=None, **kwargs):
     )
 
 
+def ack(endpoint, message_id):
+    return '6::%s:%s' % (endpoint or '',
+                         message_id)
+
+
 def error(endpoint, reason, advice=None):
     return '7::%s:%s+%s' % (endpoint or '',
                             (reason or '').encode('utf-8'),

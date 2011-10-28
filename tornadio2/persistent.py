@@ -33,9 +33,6 @@ class TornadioWebSocketHandler(WebSocketHandler):
         self.session.flush()
 
     def on_message(self, message):
-        print 'on_msg'
-        print message
-
         self.async_callback(self.session.raw_message)(message)
 
     def on_close(self):

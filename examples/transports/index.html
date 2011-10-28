@@ -99,7 +99,9 @@
       $('form').submit(function() {
         var text = $('#text').val();
         log('Sending: ' + text);
-        chat.send(text);
+        chat.send(text, function(data) {
+          log('Got ACK!')
+        });
         ping.send(text);
         $('#text').val('').focus();
         return false;

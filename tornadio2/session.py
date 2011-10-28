@@ -1,4 +1,5 @@
 import urlparse
+import time
 
 from tornadio2 import sessioncontainer, proto, periodic
 
@@ -11,8 +12,6 @@ class Session(sessioncontainer.SessionBase):
         self.server = server
         self.send_queue = []
         self.handler = None
-
-        self.last_message_id = 0
 
         # Create connection instance
         self.conn = conn(self)
@@ -153,7 +152,7 @@ class Session(sessioncontainer.SessionBase):
         self.send_message(proto.disconnect(endpoint))
 
     def get_connection(self, endpoint):
-        if endpoint is not None:
+        if endpoint:
             return self.endpoints.get(endpoint)
         else:
             return self.conn
@@ -162,44 +161,66 @@ class Session(sessioncontainer.SessionBase):
     def raw_message(self, msg):
         print '>>>', msg
 
-        parts = msg.split(':')
+        parts = msg.split(':', 3)
 
         msg_type = parts[0]
         msg_id = parts[1]
         msg_endpoint = parts[2]
-        msg_data = ':'.join(parts[3:])
+        msg_data = None
+        if len(parts) > 3:
+            msg_data = parts[3]
 
+        # Packets that don't require valid connection
         if msg_type == proto.DISCONNECT:
             if not msg_endpoint:
                 self.close()
             else:
                 self.disconnect_endpoint(msg_endpoint)
+            return
         elif msg_type == proto.CONNECT:
             if msg_endpoint:
                 self.connect_endpoint(msg_endpoint)
             else:
                 # TODO: Error logging
                 print 'Invalid connect without endpoint'
-        elif msg_type == proto.HEARTBEAT:
-            print 'HEARTBEAT'
+            return
+
+        # All other packets need endpoints
+        conn = self.get_connection(msg_endpoint)
+        if conn is None:
+            # TODO: Error logging
+            print 'Invalid endpoint: %s' % msg_endpoint
+            return
+
+        if msg_type == proto.HEARTBEAT:
             self._missed_heartbeats = 0
         elif msg_type == proto.MESSAGE:
-            conn = self.get_connection(msg_endpoint)
-            if conn is not None:
-                conn.on_message(msg_data)
-            else:
-                print 'Invalid endpoint %s' % msg_endpoint
+            # Handle text message
+            conn.on_message(msg_data)
+
+            if msg_id:
+                self.send_message(proto.ack(msg_endpoint, msg_id))
         elif msg_type == proto.JSON:
-            conn = self.get_connection(msg_endpoint)
-            if conn is not None:
-                conn.on_message(proto.json_load(msg_data))
-            else:
-                print 'Invalid endpoint %s' % msg_endpoint
+            # Handle json message
+            conn.on_message(proto.json_load(msg_data))
+
+            if msg_id:
+                self.send_message(proto.ack(msg_endpoint, msg_id))
         elif msg_type == proto.EVENT:
-            self.send_message(proto.error('', 'Not supported', ''))
+            # Javascript event
+            event = proto.json_load(msg_data)
+            conn.on_event(event['name'], event['args'])
+
+            if msg_id:
+                self.send_message(proto.ack(msg_endpoint, msg_id))
         elif msg_type == proto.ACK:
-            self.send_message(proto.error('', 'Not supported', ''))
+            # Handle ACK
+            ack_data = msg_data.split('+', 2)
+
+            # TODO: Support custom data sent from the server somehow
+            conn.deque_ack(int(ack_data[0]))
         elif msg_type == proto.ERROR:
-            self.send_message(proto.error('', 'Not supported', ''))
+            # TODO: Log it or what?
+            print 'Error: %s' % msg_data
         elif msg_type == proto.NOOP:
             pass

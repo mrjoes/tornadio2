@@ -22,25 +22,19 @@ class TornadioPollingHandlerBase(RequestHandler):
         self.server = server
         self.session = None
 
-    def _execute(self, transforms, *args, **kwargs):
-        self._transforms = transforms
-
+    def _get_session(self, session_id):
         # Get session
-        self.session = self.server.get_session(kwargs['session_id'])
+        session = self.server.get_session(session_id)
 
         # If session was not found, ignore it
-        if self.session is None:
-            self.send_error(401)
-            return
+        if session is None:
+            raise HTTPError(401)
 
         # If session is closed, but there are some pending messages left - make sure to send them
-        if self.session.is_closed and not self.session.send_queue:        
-            self.session = None
-            self.send_error(401)
-            return
+        if session.is_closed and not session.send_queue:        
+            raise HTTPError(401)
 
-        super(TornadioPollingHandlerBase, self)._execute(transforms,
-                                                         *args, **kwargs)
+        return session
 
     def _detach(self):
         if self.session:
@@ -50,12 +44,15 @@ class TornadioPollingHandlerBase(RequestHandler):
             self.session = None
 
     @asynchronous
-    def get(self, *args, **kwargs):
+    def get(self, session_id):
         """Default GET handler."""
         raise NotImplementedError()
 
     @asynchronous
-    def post(self, *args, **kwargs):
+    def post(self, session_id):
+        # Get session
+        self.session = self._get_session(session_id)
+
         # Can not send messages to closed session or if preflight() failed
         if self.session.is_closed or not self.preflight():
             raise HTTPError(401)
@@ -126,7 +123,10 @@ class TornadioXHRPollingHandler(TornadioPollingHandlerBase):
         self._timeout_interval = self.server.settings['xhr_polling_timeout']
 
     @asynchronous
-    def get(self, *args, **kwargs):
+    def get(self, session_id):
+        # Get session
+        self.session = self._get_session(session_id)
+
         if not self.session.set_handler(self):
             # TODO: Error logging
             raise HTTPError(401)
@@ -195,7 +195,10 @@ class TornadioHtmlFileHandler(TornadioPollingHandlerBase):
     client-side fails in IE7/8.
     """
     @asynchronous
-    def get(self, *args, **kwargs):
+    def get(self, session_id):
+        # Get session
+        self.session = self._get_session(session_id)
+
         if not self.session.set_handler(self):
             raise HTTPError(401)
 
@@ -235,13 +238,16 @@ class TornadioJSONPHandler(TornadioXHRPollingHandler):
         super(TornadioJSONPHandler, self).initialize(server)
 
     @asynchronous
-    def get(self, *args, **kwargs):        
+    def get(self, session_id):
         self._index = self.get_argument('i', 0)
 
-        super(TornadioJSONPHandler, self).get(*args, **kwargs)
+        super(TornadioJSONPHandler, self).get(session_id)
 
     @asynchronous
-    def post(self, *args, **kwargs):
+    def post(self, session_id):
+        # Get session
+        self.session = self._get_session(session_id)
+
         # Can not send messages to closed session or if preflight() failed
         if self.session.is_closed or not self.preflight():
             raise HTTPError(401)

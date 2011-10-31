@@ -109,7 +109,7 @@ class Session(sessioncontainer.SessionBase):
 
         self._heartbeat_timer = periodic.Callback(self._heartbeat,
                                                   self._heartbeat_interval,
-                                                  self.io_loop)
+                                                  self.server.io_loop)
         self._heartbeat_timer.start()
 
     def stop_heartbeat(self):

@@ -36,6 +36,13 @@ class TornadioPollingHandlerBase(RequestHandler):
         super(TornadioPollingHandlerBase, self)._execute(transforms,
                                                          *args, **kwargs)
 
+    def _detach(self):
+        if self.session:
+            self.session.stop_heartbeat()
+            self.session.remove_handler(self)
+
+            self.session = None
+
     @asynchronous
     def get(self, *args, **kwargs):
         """Default GET handler."""
@@ -73,6 +80,9 @@ class TornadioPollingHandlerBase(RequestHandler):
     def session_closed(self):
         """Close associated connection"""
         raise NotImplementedError()
+
+    def on_connection_close(self):
+        self._detach()
 
     @asynchronous
     def options(self, *args, **kwargs):
@@ -119,9 +129,7 @@ class TornadioXHRPollingHandler(TornadioPollingHandlerBase):
                 raise HTTPError(401, 'Forbidden')
 
             if not self.session.send_queue:
-                self._timeout = self.server.io_loop.add_timeout(
-                    time.time() + self._timeout_interval,
-                    self._polling_timeout)
+                self._bump_timeout()
             else:
                 self.session.flush()
         except Exception:
@@ -129,26 +137,31 @@ class TornadioXHRPollingHandler(TornadioPollingHandlerBase):
             import traceback
             traceback.print_exc()
 
+    def _stop_timeout(self):
+        if self._timeout is not None:
+            self.server.io_loop.remove_timeout(self._timeout)
+            self._timeout = None
+
+    def _bump_timeout(self):
+        self._stop_timeout()
+
+        self._timeout = self.server.io_loop.add_timeout(
+                                time.time() + self._timeout_interval,
+                                self._polling_timeout
+                                )
+
     def _polling_timeout(self):
-        try:            
+        try:
             self.send_messages([proto.noop()])
-            self.finish()
         except Exception:
             logging.debug('Exception', exc_info=True)
         finally:
             self._detach()
 
     def _detach(self):
-        if self._timeout is not None:
-            self.server.io_loop.remove_timeout(self._timeout)
-            self.timeout = None
+        self._stop_timeout()
 
-        if self.session:
-            self.session.remove_handler(self)
-            self.session = None
-
-    def on_connection_close(self):
-        self._detach()
+        super(TornadioXHRPollingHandler, self)._detach()
 
     def send_messages(self, messages):
         # Encode multiple messages as UTF-8 string
@@ -192,14 +205,6 @@ class TornadioXHRMultipartHandler(TornadioPollingHandlerBase):
         # We need heartbeats
         self.session.reset_heartbeat()
 
-    def _detach(self):
-        if self.session:
-            self.session.stop_heartbeat()
-            self.session.remove_handler(self)
-
-    def on_connection_close(self):
-        self._detach()
-
     def send_messages(self, messages):
         data = proto.encode_frames(messages)
 
@@ -235,7 +240,7 @@ class TornadioHtmlFileHandler(TornadioPollingHandlerBase):
         self.set_header('Content-Type', 'text/html; charset=UTF-8')
         self.set_header('Connection', 'keep-alive')
         self.set_header('Transfer-Encoding', 'chunked')
-        self.write('<html><body>%s' % (' ' * 244))
+        self.write('<html><body><script>var _ = function (msg) { parent.s._(msg, document); };</script>' + (' ' * 174))
 
         # Dump any queued messages
         self.session.flush()
@@ -243,19 +248,11 @@ class TornadioHtmlFileHandler(TornadioPollingHandlerBase):
         # We need heartbeats
         self.session.reset_heartbeat()
 
-    def _detach(self):
-        if self.session:
-            self.session.stop_heartbeat()
-            self.session.remove_handler(self)
-
-    def on_connection_close(self):
-        self._detach()
-
     def send_messages(self, messages):
         data = proto.encode_frames(messages)
 
         self.write(
-            '<script>parent.s_(%s),document);</script>' % proto.json_dumps(data)
+            '<script>_(%s);</script>' % proto.json_dumps(data)
             )
         self.flush()
 
@@ -272,11 +269,13 @@ class TornadioHtmlFileHandler(TornadioPollingHandlerBase):
 class TornadioJSONPHandler(TornadioXHRPollingHandler):
     def initialize(self, server):
         self._index = None
+
         super(TornadioJSONPHandler, self).initialize(server)
 
     @asynchronous
-    def get(self, *args, **kwargs):
-        self._index = self.get_argument('i', None)
+    def get(self, *args, **kwargs):        
+        self._index = self.get_argument('i', 0)
+
         super(TornadioJSONPHandler, self).get(*args, **kwargs)
 
     @asynchronous
@@ -303,11 +302,11 @@ class TornadioJSONPHandler(TornadioXHRPollingHandler):
                 # Close session if something went wrong
                 self.session.close()
 
-        self.set_header('Content-Type', 'text/plain; charset=UTF-8')
+        self.set_header('Content-Type', 'text/plain; charset=UTF-8')        
         self.finish()
 
     def send_messages(self, messages):
-        if not self._index:
+        if self._index is None:
             raise HTTPError(401, 'unauthorized')
 
         data = proto.encode_frames(messages)
@@ -318,11 +317,13 @@ class TornadioJSONPHandler(TornadioXHRPollingHandler):
             )
 
         self.preflight()
-        self.set_header("Content-Type", "text/javascript; charset=UTF-8")
-        self.set_header("Content-Length", len(message))
+        self.set_header('Content-Type', 'text/javascript; charset=UTF-8')
+        self.set_header('Content-Length', len(message))
+        self.set_header('X-XSS-Protection', '0')
+        self.set_header('Connection', 'Keep-Alive')
         self.write(message)
 
-        # Detach connection
         self._detach()
 
         self.finish()
+

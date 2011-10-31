@@ -74,8 +74,8 @@ def message(endpoint, msg, message_id=None):
 def event(endpoint, name, message_id=None, **kwargs):
     evt = dict(
         name=name,
-        args=kwargs
-    )
+        args=[kwargs]
+    )    
 
     return '5:%s:%s:%s' % (
         message_id or '',

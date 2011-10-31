@@ -31,6 +31,11 @@ class TornadioWebSocketHandler(WebSocketHandler):
         # Flush messages, if any
         self.session.flush()
 
+    def _detach(self):
+        if self.session is not None:
+            self.session.stop_heartbeat()
+            self.session.remove_handler(self)
+
     def on_message(self, message):
         try:
             self.session.raw_message(message)
@@ -39,14 +44,19 @@ class TornadioWebSocketHandler(WebSocketHandler):
             self.session.close()            
 
     def on_close(self):
-        if self.session is not None:
-            self.session.stop_heartbeat()
-            self.session.remove_handler(self)
+        self._detach()
 
     def send_messages(self, messages):
         for m in messages:
             self.write_message(m)
 
+    def session_closed(self):
+        try:
+            self.finish()
+        except Exception:
+            logging.debug('Exception', exc_info=True)
+        finally:
+            self._detach()
 
 class TornadioFlashSocketHandler(WebSocketHandler):
     def initialize(self, server):

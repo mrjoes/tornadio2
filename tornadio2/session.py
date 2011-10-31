@@ -223,7 +223,16 @@ class Session(sessioncontainer.SessionBase):
             elif msg_type == proto.EVENT:
                 # Javascript event
                 event = proto.json_load(msg_data)
-                conn.on_event(event['name'], **event['args'])
+
+                args = event['args']
+
+                # It is kind of magic - if there's only one parameter
+                # and it is dict, unpack dictionary. Otherwise, pass
+                # as *args
+                if len(args) == 1 and isinstance(args[0], dict):
+                    conn.on_event(event['name'], **args[0])
+                else:
+                    conn.on_event(event['name'], *args)
 
                 if msg_id:
                     self.send_message(proto.ack(msg_endpoint, msg_id))

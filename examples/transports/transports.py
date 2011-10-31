@@ -43,6 +43,9 @@ class ChatConnection(tornadio2.conn.SocketConnection):
     def get_endpoint(self, endpoint):
         return ChatConnection
 
+    @tornadio2.conn.event('test')
+    def test(self, msg):
+        self.emit('test', msg=msg)
 
 #use the routes classmethod to build the correct resource
 ChatServer = tornadio2.router.TornadioServer(ChatConnection)

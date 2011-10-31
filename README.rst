@@ -20,7 +20,7 @@ most of the features found in original Socket.IO server software.
 
 Upgrading from first TornadIO version
 -------------------------------------
-TornadIO has some incompatible API changes.
+TornadIO2 has some incompatible API changes.
 
 1. Instead of having one rule and a router handler, TornadIO2 exposes transports
 as first-class Tornado handlers. This saves some memory per active connection,
@@ -40,7 +40,7 @@ or alternative approach:
 	ChatServer = tornadio2.router.TornadioServer(ChatConnection)
 	application = tornado.web.Application(ChatServer.apply_routes([(r"/", IndexHandler)]))
 
-2. Socket.IO 0.7 dropped xhr-multipart transport, so you can safely remove it from your configuration files
+2. Socket.IO 0.7 dropped support for xhr-multipart transport, so you can safely remove it from your configuration file
 
 Getting Started
 ---------------

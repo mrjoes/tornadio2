@@ -79,7 +79,7 @@ class TornadioPollingHandlerBase(RequestHandler):
 
     def session_closed(self):
         """Close associated connection"""
-        raise NotImplementedError()
+        self._detach()
 
     def on_connection_close(self):
         self._detach()

@@ -103,7 +103,10 @@
           log('Got ACK!')
         });
         ping.send(text);
-        $('#text').val('').focus();
+
+        chat.emit('test', {msg: text});
+
+        $('#text').val('').focus();        
         return false;
       });
     });

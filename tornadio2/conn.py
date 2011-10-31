@@ -74,6 +74,8 @@ class SocketConnection(object):
         """Forcibly close client connection"""
         self.session.close(self.endpoint)
 
+        # TODO: Notify unconfirmed messages?
+
     # ACKS
     def queue_ack(self, callback, message):
         ack_id = self.ack_id
@@ -92,7 +94,7 @@ class SocketConnection(object):
 
             callback(message)
         else:
-            print 'Invalid msg_id for ACK'
+            logging.error('Received invalid msg_id for ACK: %s' % msg_id)
 
     # Endpoint factory
     def get_endpoint(self, endpoint):

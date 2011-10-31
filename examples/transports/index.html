@@ -21,11 +21,11 @@
             return $(this).attr('id');
         });
 
-        chat = io.connect('http://localhost.:8001/chat', {
+        chat = io.connect('http://localhost:8001/chat', {
                   transports: transports,
                   rememberTransport: false
                });
-        ping = io.connect('http://localhost.:8001/ping', {
+        ping = io.connect('http://localhost:8001/ping', {
                   transports: transports,
                   rememberTransport: false
         });

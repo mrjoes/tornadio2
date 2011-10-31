@@ -17,7 +17,6 @@ PROTOCOLS = {
     'websocket': persistent.TornadioWebSocketHandler,
     'flashsocket': persistent.TornadioFlashSocketHandler,
     'xhr-polling': polling.TornadioXHRPollingHandler,
-    'xhr-multipart': polling.TornadioXHRMultipartHandler,
     'htmlfile': polling.TornadioHtmlFileHandler,
     'jsonp-polling': polling.TornadioJSONPHandler,
     }
@@ -31,8 +30,8 @@ DEFAULT_SETTINGS = {
     # you absolutely sure that new value will work.
     'heartbeat_interval': 12,
     # Enabled protocols
-    'enabled_protocols': ['websocket', 'flashsocket', 'xhr-multipart',
-                          'xhr-polling', 'jsonp-polling', 'htmlfile'],
+    'enabled_protocols': ['websocket', 'flashsocket', 'xhr-polling', 
+                          'jsonp-polling', 'htmlfile'],
     # XHR-Polling request timeout, in seconds
     'xhr_polling_timeout': 20,
     }

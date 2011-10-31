@@ -187,43 +187,6 @@ class TornadioXHRPollingHandler(TornadioPollingHandlerBase):
         finally:
             self._detach()
 
-class TornadioXHRMultipartHandler(TornadioPollingHandlerBase):
-    @asynchronous
-    def get(self, *args, **kwargs):
-        if not self.session.set_handler(self):
-            # TODO: Error logging
-            raise HTTPError(401, 'Forbidden')
-
-        self.set_header('Content-Type',
-                        'multipart/x-mixed-replace;boundary="socketio; charset=UTF-8"')
-        self.set_header('Connection', 'keep-alive')
-        self.write('--socketio\n')
-
-        # Dump any queued messages
-        self.session.flush()
-
-        # We need heartbeats
-        self.session.reset_heartbeat()
-
-    def send_messages(self, messages):
-        data = proto.encode_frames(messages)
-
-        self.preflight()
-        self.write("Content-Type: text/plain; charset=UTF-8\n\n")
-        self.write(data + '\n')
-        self.write('--socketio\n')
-        self.flush()
-
-        self.session.delay_heartbeat()
-
-    def session_closed(self):
-        try:
-            self.finish()
-        except Exception:
-            logging.debug('Exception', exc_info=True)
-        finally:
-            self._detach()
-
 class TornadioHtmlFileHandler(TornadioPollingHandlerBase):
     """IE HtmlFile protocol implementation.
 
@@ -238,9 +201,9 @@ class TornadioHtmlFileHandler(TornadioPollingHandlerBase):
             raise HTTPError(401, 'Forbidden')
 
         self.set_header('Content-Type', 'text/html; charset=UTF-8')
-        self.set_header('Connection', 'keep-alive')
-        self.set_header('Transfer-Encoding', 'chunked')
+        self.set_header('Connection', 'keep-alive')        
         self.write('<html><body><script>var _ = function (msg) { parent.s._(msg, document); };</script>' + (' ' * 174))
+        self.flush()
 
         # Dump any queued messages
         self.session.flush()

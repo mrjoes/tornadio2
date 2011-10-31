@@ -10,6 +10,7 @@
 """
 import time
 import logging
+import urllib
 
 from tornado.web import RequestHandler, HTTPError, asynchronous
 
@@ -50,7 +51,7 @@ class TornadioPollingHandlerBase(RequestHandler):
 
         # IE XDomainRequest support
         if data.startswith('data='):
-            data = data(data[5:])
+            data = data[5:]
 
         # Process packets one by one
         packets = proto.decode_frames(data)
@@ -129,7 +130,8 @@ class TornadioXHRPollingHandler(TornadioPollingHandlerBase):
             traceback.print_exc()
 
     def _polling_timeout(self):
-        try:
+        try:            
+            self.send_messages([proto.noop()])
             self.finish()
         except Exception:
             logging.debug('Exception', exc_info=True)
@@ -268,27 +270,49 @@ class TornadioHtmlFileHandler(TornadioPollingHandlerBase):
             self._detach()
 
 class TornadioJSONPHandler(TornadioXHRPollingHandler):
-    def __init__(self, router, session_id):
+    def initialize(self, server):
         self._index = None
-        super(TornadioJSONPHandler, self).__init__(router, session_id)
+        super(TornadioJSONPHandler, self).initialize(server)
 
     @asynchronous
     def get(self, *args, **kwargs):
-        self._index = kwargs.get('jsonp_index', None)
+        self._index = self.get_argument('i', None)
         super(TornadioJSONPHandler, self).get(*args, **kwargs)
 
     @asynchronous
     def post(self, *args, **kwargs):
-        self._index = kwargs.get('jsonp_index', None)
-        super(TornadioJSONPHandler, self).post(*args, **kwargs)
+        # Can not send messages to closed session or if preflight() failed
+        if self.session.is_closed or not self.preflight():
+            raise HTTPError(401, 'Unauthorized')
 
-    def send_raw(self, messages):
+        data = self.request.body
+
+        # IE XDomainRequest support
+        if not data.startswith('d='):
+            logging.error('Malformed JSONP POST request')
+            raise HTTPError(403, 'Forbidden')
+            
+        data = urllib.unquote(data[2:])
+
+        # Process packets one by one
+        packets = proto.decode_frames(data)
+        for p in packets:
+            try:
+                self.session.raw_message(p)
+            except Exception:
+                # Close session if something went wrong
+                self.session.close()
+
+        self.set_header('Content-Type', 'text/plain; charset=UTF-8')
+        self.finish()
+
+    def send_messages(self, messages):
         if not self._index:
             raise HTTPError(401, 'unauthorized')
 
         data = proto.encode_frames(messages)
 
-        message = 'io.JSONP[%s]._(%s);' % (
+        message = 'io.j[%s](%s);' % (
             self._index,
             proto.json_dumps(data)
             )
@@ -302,4 +326,3 @@ class TornadioJSONPHandler(TornadioXHRPollingHandler):
         self._detach()
 
         self.finish()
-

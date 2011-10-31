@@ -73,7 +73,7 @@ class Session(sessioncontainer.SessionBase):
         self.send_queue = []
 
         # If session was closed, detach connection
-        if self.is_closed:
+        if self.is_closed and self.handler is not None:
             self.handler.session_closed()
 
     # Close connection with all endpoints or just one endpoint

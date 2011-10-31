@@ -125,6 +125,10 @@ class TornadioServer(object):
     def urls(self):
         return self._transport_urls
 
+    def apply_routes(self, routes):
+        routes.extend(self._transport_urls)
+        return routes
+
     def create_session(self):
         # TODO: Possible optimization here for settings.get
         s = session.Session(self._connection,

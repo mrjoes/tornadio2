@@ -24,7 +24,7 @@ class ChatConnection(tornadio2.conn.SocketConnection):
     # Class level variable
     participants = set()
 
-    def ack(self, message, extra):
+    def ack(self, message):
         print 'GOT ACK!'
 
     def on_open(self, *args, **kwargs):

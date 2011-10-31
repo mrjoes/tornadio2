@@ -35,7 +35,7 @@ class SocketConnection(object):
 
     def on_close(self):
         """Default on_close handler."""
-        pass
+        pass    
 
     def send(self, message, callback=None):
         """Send message to the client.
@@ -63,9 +63,7 @@ class SocketConnection(object):
         if callback is not None:
             msg = proto.event(self.endpoint,
                               name,
-                              self.queue_ack(callback,
-                                             name,
-                                             kwargs),
+                              self.queue_ack(callback, (name, kwargs)),
                               **kwargs)
         else:
             msg = proto.event(self.endpoint, name, **kwargs)
@@ -77,13 +75,12 @@ class SocketConnection(object):
         self.session.close(self.endpoint)
 
     # ACKS
-    def queue_ack(self, callback, message, extra_params=None):
+    def queue_ack(self, callback, message):
         ack_id = self.ack_id
 
         self.ack_queue[ack_id] = (time.time(),
                                   callback,
-                                  message,
-                                  extra_params)
+                                  message)
 
         self.ack_id += 1
 
@@ -91,9 +88,9 @@ class SocketConnection(object):
 
     def deque_ack(self, msg_id):
         if msg_id in self.ack_queue:
-            time_stamp, callback, message, extra_params = self.ack_queue.pop(msg_id)
+            time_stamp, callback, message = self.ack_queue.pop(msg_id)
 
-            callback(message, extra_params)
+            callback(message)
         else:
             print 'Invalid msg_id for ACK'
 
@@ -103,6 +100,8 @@ class SocketConnection(object):
 
 
 class RouterMixin(object):
+    _endpoints_ = dict()
+
     def get_endpoint(self, endpoint):
         if endpoint in self._endpoints_:
             return self._endpoints_[endpoint]

@@ -21,7 +21,6 @@ class TornadioWebSocketHandler(WebSocketHandler):
         self.server = server
 
     def open(self, session_id):
-        # TODO: Version check
         self.session = self.server.get_session(session_id)
         if self.session is None:
             raise tornado.HTTPError(404, "Invalid Session")
@@ -33,7 +32,11 @@ class TornadioWebSocketHandler(WebSocketHandler):
         self.session.flush()
 
     def on_message(self, message):
-        self.async_callback(self.session.raw_message)(message)
+        try:
+            self.session.raw_message(message)
+        except Exception:
+            # Close session on exception
+            self.session.close()            
 
     def on_close(self):
         if self.session is not None:

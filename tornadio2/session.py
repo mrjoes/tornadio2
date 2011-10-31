@@ -1,5 +1,6 @@
 import urlparse
 import time
+import logging
 
 from tornadio2 import sessioncontainer, proto, periodic
 
@@ -55,7 +56,7 @@ class Session(sessioncontainer.SessionBase):
         self.promote()
 
     def send_message(self, pack):
-        print '<<<', pack
+        logging.debug('<<< ' + pack)
 
         self.send_queue.append(pack)
         self.flush()
@@ -71,12 +72,16 @@ class Session(sessioncontainer.SessionBase):
 
         self.send_queue = []
 
+        # If session was closed, detach connection
+        if self.is_closed:
+            self.handler.session_closed()
+
     # Close connection with all endpoints or just one endpoint
-    def close(self, endpoint):
-        if not endpoint:
+    def close(self, endpoint=None):
+        if endpoint is None:
             if not self.conn.is_closed:
                 # Close child connections
-                for k in self.endpoints.iterkeys():
+                for k in self.endpoints.keys():
                     self.disconnect_endpoint(k)
 
                 # Close parent connections
@@ -87,6 +92,10 @@ class Session(sessioncontainer.SessionBase):
 
                 # Send disconnection message
                 self.send_message(proto.disconnect())
+
+                # Notify transport that session was closed
+                if self.handler is not None:
+                    self.handler.session_closed()
         else:
             self.disconnect_endpoint(endpoint)
 
@@ -129,7 +138,7 @@ class Session(sessioncontainer.SessionBase):
 
         conn_class = self.conn.get_endpoint(endpoint)
         if conn_class is None:
-            self.send_message(proto.error(None, 'Invalid endpoint %s' % endpoint))
+            logging.error('There is no handler for endpoint %s' % endpoint)
             return
 
         conn = conn_class(self, endpoint)
@@ -137,11 +146,16 @@ class Session(sessioncontainer.SessionBase):
 
         self.send_message(proto.connect(endpoint))
 
-        conn.on_open()
+        args = urlparse.parse_qs(urldata.query)
+
+        # TODO: Add support for multiple arguments with same name
+        final_args = dict((k,v[0]) for k,v in args.iteritems()) 
+
+        conn.on_open(**final_args)
 
     def disconnect_endpoint(self, endpoint):
         if endpoint not in self.endpoints:
-            self.send_message(proto.error(None, 'Invalid endpoint %s' % endpoint))
+            logging.error('Invalid endpoint for disconnect %s' % endpoint)
             return
 
         conn = self.endpoints[endpoint]
@@ -159,68 +173,74 @@ class Session(sessioncontainer.SessionBase):
 
     # Message handler
     def raw_message(self, msg):
-        print '>>>', msg
+        try:
+            logging.debug('>>> ' + msg)
 
-        parts = msg.split(':', 3)
+            parts = msg.split(':', 3)
 
-        msg_type = parts[0]
-        msg_id = parts[1]
-        msg_endpoint = parts[2]
-        msg_data = None
-        if len(parts) > 3:
-            msg_data = parts[3]
+            msg_type = parts[0]
+            msg_id = parts[1]
+            msg_endpoint = parts[2]
+            msg_data = None
+            if len(parts) > 3:
+                msg_data = parts[3]
 
-        # Packets that don't require valid connection
-        if msg_type == proto.DISCONNECT:
-            if not msg_endpoint:
-                self.close()
-            else:
-                self.disconnect_endpoint(msg_endpoint)
-            return
-        elif msg_type == proto.CONNECT:
-            if msg_endpoint:
-                self.connect_endpoint(msg_endpoint)
-            else:
-                # TODO: Error logging
-                print 'Invalid connect without endpoint'
-            return
+            # Packets that don't require valid connection
+            if msg_type == proto.DISCONNECT:
+                if not msg_endpoint:
+                    self.close()
+                else:
+                    self.disconnect_endpoint(msg_endpoint)
+                return
+            elif msg_type == proto.CONNECT:
+                if msg_endpoint:
+                    self.connect_endpoint(msg_endpoint)
+                else:
+                    # TODO: Disconnect?
+                    logging.error('Invalid connect without endpoint')
+                return
 
-        # All other packets need endpoints
-        conn = self.get_connection(msg_endpoint)
-        if conn is None:
-            # TODO: Error logging
-            print 'Invalid endpoint: %s' % msg_endpoint
-            return
+            # All other packets need endpoints
+            conn = self.get_connection(msg_endpoint)
+            if conn is None:
+                logging.error('Invalid endpoint: %s' % msg_endpoint)
+                return
 
-        if msg_type == proto.HEARTBEAT:
-            self._missed_heartbeats = 0
-        elif msg_type == proto.MESSAGE:
-            # Handle text message
-            conn.on_message(msg_data)
+            if msg_type == proto.HEARTBEAT:
+                self._missed_heartbeats = 0
+            elif msg_type == proto.MESSAGE:
+                # Handle text message
+                conn.on_message(msg_data)
 
-            if msg_id:
-                self.send_message(proto.ack(msg_endpoint, msg_id))
-        elif msg_type == proto.JSON:
-            # Handle json message
-            conn.on_message(proto.json_load(msg_data))
+                if msg_id:
+                    self.send_message(proto.ack(msg_endpoint, msg_id))
+            elif msg_type == proto.JSON:
+                # Handle json message
+                conn.on_message(proto.json_load(msg_data))
 
-            if msg_id:
-                self.send_message(proto.ack(msg_endpoint, msg_id))
-        elif msg_type == proto.EVENT:
-            # Javascript event
-            event = proto.json_load(msg_data)
-            conn.on_event(event['name'], event['args'])
+                if msg_id:
+                    self.send_message(proto.ack(msg_endpoint, msg_id))
+            elif msg_type == proto.EVENT:
+                # Javascript event
+                event = proto.json_load(msg_data)
+                conn.on_event(event['name'], **event['args'])
 
-            if msg_id:
-                self.send_message(proto.ack(msg_endpoint, msg_id))
-        elif msg_type == proto.ACK:
-            # Handle ACK
-            ack_data = msg_data.split('+', 2)
+                if msg_id:
+                    self.send_message(proto.ack(msg_endpoint, msg_id))
+            elif msg_type == proto.ACK:
+                # Handle ACK
+                ack_data = msg_data.split('+', 2)
 
-            # TODO: Support custom data sent from the server somehow
-            conn.deque_ack(int(ack_data[0]))
-        elif msg_type == proto.ERROR:
-            # TODO: Log it or what?
-            print 'Error: %s' % msg_data
-        elif msg_type == proto.NOOP:
-            pass
+                # TODO: Support custom data sent from the server
+                conn.deque_ack(int(ack_data[0]))
+            elif msg_type == proto.ERROR:
+                # TODO: Pass it to handler?
+                logging.error('Incoming error: %s' % msg_data)            
+            elif msg_type == proto.NOOP:
+                pass
+        except Exception, ex:
+            logging.exception(ex)
+
+            # TODO: Add global exception callback?
+
+            raise

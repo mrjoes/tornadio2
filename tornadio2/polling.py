@@ -9,6 +9,7 @@
     :license: Apache, see LICENSE for more details.
 """
 import time
+import logging
 
 from tornado.web import RequestHandler, HTTPError, asynchronous
 
@@ -23,8 +24,12 @@ class TornadioPollingHandlerBase(RequestHandler):
     def _execute(self, transforms, *args, **kwargs):
         self.session = self.server.get_session(kwargs['session_id'])
 
-        if self.session is None or self.session.is_closed:
-            # TODO: clean me up
+        # If session was not found, ignore it
+        if self.session is None:
+            raise HTTPError(401, 'Invalid session')
+
+        # If session is closed, but there are some pending messages left - make sure to send them
+        if self.session.is_closed and not self.session.send_queue:        
             raise HTTPError(401, 'Invalid session')
 
         super(TornadioPollingHandlerBase, self)._execute(transforms,
@@ -37,8 +42,9 @@ class TornadioPollingHandlerBase(RequestHandler):
 
     @asynchronous
     def post(self, *args, **kwargs):
-        if not self.preflight():
-            raise HTTPError(401, 'unauthorized')
+        # Can not send messages to closed session or if preflight() failed
+        if self.session.is_closed or not self.preflight():
+            raise HTTPError(401, 'Unauthorized')
 
         data = self.request.body
 
@@ -52,9 +58,8 @@ class TornadioPollingHandlerBase(RequestHandler):
             try:
                 self.session.raw_message(p)
             except Exception:
-                # TODO: Do what?
-                import traceback
-                traceback.print_exc()
+                # Close session if something went wrong
+                self.session.close()
 
         self.set_header('Content-Type', 'text/plain; charset=UTF-8')
         #self.write('')
@@ -62,6 +67,10 @@ class TornadioPollingHandlerBase(RequestHandler):
 
     def send_messages(self, messages):
         """Called by the session when some data is available"""
+        raise NotImplementedError()
+
+    def session_closed(self):
+        """Close associated connection"""
         raise NotImplementedError()
 
     @asynchronous
@@ -120,14 +129,10 @@ class TornadioXHRPollingHandler(TornadioPollingHandlerBase):
             traceback.print_exc()
 
     def _polling_timeout(self):
-        print 'Polling timeout, closing'
-
         try:
             self.finish()
         except Exception:
-            # Silenty ignore noop - if connection was already closed,
-            # then ignore exception and silently detach
-            pass
+            logging.debug('Exception', exc_info=True)
         finally:
             self._detach()
 
@@ -159,6 +164,13 @@ class TornadioXHRPollingHandler(TornadioPollingHandlerBase):
         # Close connection
         self.finish()
 
+    def session_closed(self):
+        try:
+            self.finish()
+        except Exception:
+            logging.debug('Exception', exc_info=True)
+        finally:
+            self._detach()
 
 class TornadioXHRMultipartHandler(TornadioPollingHandlerBase):
     @asynchronous
@@ -176,12 +188,15 @@ class TornadioXHRMultipartHandler(TornadioPollingHandlerBase):
         self.session.flush()
 
         # We need heartbeats
-        #self.session.reset_heartbeat()
+        self.session.reset_heartbeat()
+
+    def _detach(self):
+        if self.session:
+            self.session.stop_heartbeat()
+            self.session.remove_handler(self)
 
     def on_connection_close(self):
-        if self.session:
-            #self.session.stop_heartbeat()
-            self.session.remove_handler(self)
+        self._detach()
 
     def send_messages(self, messages):
         data = proto.encode_frames(messages)
@@ -192,8 +207,15 @@ class TornadioXHRMultipartHandler(TornadioPollingHandlerBase):
         self.write('--socketio\n')
         self.flush()
 
-        #self.session.delay_heartbeat()
+        self.session.delay_heartbeat()
 
+    def session_closed(self):
+        try:
+            self.finish()
+        except Exception:
+            logging.debug('Exception', exc_info=True)
+        finally:
+            self._detach()
 
 class TornadioHtmlFileHandler(TornadioPollingHandlerBase):
     """IE HtmlFile protocol implementation.
@@ -217,12 +239,15 @@ class TornadioHtmlFileHandler(TornadioPollingHandlerBase):
         self.session.flush()
 
         # We need heartbeats
-        #self.session.reset_heartbeat()
+        self.session.reset_heartbeat()
+
+    def _detach(self):
+        if self.session:
+            self.session.stop_heartbeat()
+            self.session.remove_handler(self)
 
     def on_connection_close(self):
-        if self.session:
-            #self.session.stop_heartbeat()
-            self.session.remove_handler(self)
+        self._detach()
 
     def send_messages(self, messages):
         data = proto.encode_frames(messages)
@@ -232,8 +257,15 @@ class TornadioHtmlFileHandler(TornadioPollingHandlerBase):
             )
         self.flush()
 
-        #self.session.delay_heartbeat()
+        self.session.delay_heartbeat()
 
+    def session_closed(self):
+        try:
+            self.finish()
+        except Exception:
+            logging.debug('Exception', exc_info=True)
+        finally:
+            self._detach()
 
 class TornadioJSONPHandler(TornadioXHRPollingHandler):
     def __init__(self, router, session_id):

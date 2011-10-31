@@ -11,7 +11,55 @@ import logging
 
 from tornadio2 import proto
 
-class LightweightConnection(object):
+
+def event(name):
+    def handler(f):
+        f._event_name = name
+        return f    
+    return handler
+
+
+class EventMagicMeta(type):
+    def __init__(cls, name, bases, attrs):
+        events = {}
+
+        for a in attrs:    
+            attr = getattr(cls, a)        
+            name = getattr(attr, '_event_name', None)
+
+            if name:
+                events[name] = attr
+
+        setattr(cls, '_events', events)
+
+        super(EventMagicMeta, cls).__init__(name, bases, attrs)
+
+
+class SocketConnection(object):
+    """Socket connection class.
+
+    To support socket.io connection multiplexing, define `_endpoints_` dictionary on class
+    level, where key is endpoint name and value is connection class:
+    ::
+        class MyConnection(SocketConnection):
+            __endpoints__ = dict(clock=ClockConnection,
+                                 game=GameConnection)
+
+    SocketConnection has useful event decorator. To use it, wrap method with a event() decorator:
+    ::
+        class MyConnection(SocketConnection):
+            @event('test')
+            def test(self, msg):
+                print msg
+
+    And thn, when you run following client code server should print 'Hello World':
+    ::
+        sock.emit('test', {msg:'Hello World'});    
+    """
+    __metaclass__ = EventMagicMeta
+
+    __endpoints__ = dict()
+
     def __init__(self, session, endpoint=None):
         self.session = session
         self.endpoint = endpoint
@@ -30,11 +78,13 @@ class LightweightConnection(object):
         """Default on_message handler. Must be overridden"""
         raise NotImplementedError()
 
-    def on_event(self, name, **kwargs):
-        """Default on_event handler. Must be overridden.
-        SocketConnection class already implements it through EventMagicMixin.
-        """
-        raise NotImplementedError()
+    def on_event(self, name, *args, **kwargs):
+        handler = self._events.get(name)
+
+        if handler:
+            handler(self, **kwargs)
+        else:
+            logging.error('Invalid event name: %s' % name)
 
     def on_close(self):
         """Default on_close handler."""
@@ -101,77 +151,5 @@ class LightweightConnection(object):
 
     # Endpoint factory
     def get_endpoint(self, endpoint):
-        """Called by TornadIO code when there's incoming endpoint connection request.
-        You should either implement this method or use SocketConnection class, which
-        has this method implemented through RouterMixin"""
-        return None
-
-
-class RouterMixin(object):
-    """Implements simple endpoint management mixin.
-
-    To use this mixin, define `_endpoints_` dictionary on class level, where key
-    is endpoint name and value is connection class:
-    ::
-        class MyConnection(SocketConnection):
-            __endpoints__ = dict(clock=ClockConnection,
-                                 game=GameConnection)
-    """
-    __endpoints__ = dict()
-
-    def get_endpoint(self, endpoint):
-        if endpoint in self._endpoints_:
-            return self._endpoints_[endpoint]
-
-
-def event(name):
-    def handler(f):
-        f._event_name = name
-        return f    
-    return handler
-
-class EventMagicMeta(type):
-    def __init__(cls, name, bases, attrs):
-        events = {}
-
-        for a in attrs:    
-            attr = getattr(cls, a)        
-            name = getattr(attr, '_event_name', None)
-
-            if name:
-                events[name] = attr
-
-        setattr(cls, '_events', events)
-
-        super(EventMagicMeta, cls).__init__(name, bases, attrs)
-
-class EventMagicMixin(object):
-    """Implements decorator-based event handlers.
-
-    For example:
-    ::
-        class MyConnection(SocketConnection):
-            @event('test')
-            def test(self, msg):
-                print msg
-
-    When you run following client code:
-    ::
-        sock.emit('test', {msg:'Hello World'});
-
-    server should print 'Hello World'.
-    """
-
-    __metaclass__ = EventMagicMeta
-
-    def on_event(self, name, **kwargs):
-        handler = self._events.get(name)
-
-        if handler:
-            handler(self, **kwargs)
-        else:
-            logging.error('Invalid event name: %s' % name)
-
-
-class SocketConnection(EventMagicMixin, RouterMixin, LightweightConnection):
-    pass
+        if endpoint in self.__endpoints__:
+            return self.__endpoints__[endpoint]

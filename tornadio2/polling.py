@@ -23,15 +23,21 @@ class TornadioPollingHandlerBase(RequestHandler):
         self.session = None
 
     def _execute(self, transforms, *args, **kwargs):
+        self._transforms = transforms
+
+        # Get session
         self.session = self.server.get_session(kwargs['session_id'])
 
         # If session was not found, ignore it
         if self.session is None:
-            raise HTTPError(401, 'Invalid session')
+            self.send_error(401)
+            return
 
         # If session is closed, but there are some pending messages left - make sure to send them
         if self.session.is_closed and not self.session.send_queue:        
-            raise HTTPError(401, 'Invalid session')
+            self.session = None
+            self.send_error(401)
+            return
 
         super(TornadioPollingHandlerBase, self)._execute(transforms,
                                                          *args, **kwargs)
@@ -52,7 +58,7 @@ class TornadioPollingHandlerBase(RequestHandler):
     def post(self, *args, **kwargs):
         # Can not send messages to closed session or if preflight() failed
         if self.session.is_closed or not self.preflight():
-            raise HTTPError(401, 'Unauthorized')
+            raise HTTPError(401)
 
         data = self.request.body
 
@@ -81,7 +87,7 @@ class TornadioPollingHandlerBase(RequestHandler):
         """Close associated connection"""
         self._detach()
 
-    def on_connection_close(self):
+    def on_connection_close(self):        
         self._detach()
 
     @asynchronous
@@ -121,21 +127,14 @@ class TornadioXHRPollingHandler(TornadioPollingHandlerBase):
 
     @asynchronous
     def get(self, *args, **kwargs):
-        # TODO: Remove try/catch
-        try:
-            # Assign handler
-            if not self.session.set_handler(self):
-                # TODO: Error logging
-                raise HTTPError(401, 'Forbidden')
+        if not self.session.set_handler(self):
+            # TODO: Error logging
+            raise HTTPError(401)
 
-            if not self.session.send_queue:
-                self._bump_timeout()
-            else:
-                self.session.flush()
-        except Exception:
-            # TODO: Do what?
-            import traceback
-            traceback.print_exc()
+        if not self.session.send_queue:
+            self._bump_timeout()
+        else:
+            self.session.flush()
 
     def _stop_timeout(self):
         if self._timeout is not None:
@@ -198,7 +197,7 @@ class TornadioHtmlFileHandler(TornadioPollingHandlerBase):
     @asynchronous
     def get(self, *args, **kwargs):
         if not self.session.set_handler(self):
-            raise HTTPError(401, 'Forbidden')
+            raise HTTPError(401)
 
         self.set_header('Content-Type', 'text/html; charset=UTF-8')
         self.set_header('Connection', 'keep-alive')        
@@ -245,14 +244,14 @@ class TornadioJSONPHandler(TornadioXHRPollingHandler):
     def post(self, *args, **kwargs):
         # Can not send messages to closed session or if preflight() failed
         if self.session.is_closed or not self.preflight():
-            raise HTTPError(401, 'Unauthorized')
+            raise HTTPError(401)
 
         data = self.request.body
 
         # IE XDomainRequest support
         if not data.startswith('d='):
             logging.error('Malformed JSONP POST request')
-            raise HTTPError(403, 'Forbidden')
+            raise HTTPError(403)
             
         data = urllib.unquote(data[2:])
 
@@ -270,7 +269,7 @@ class TornadioJSONPHandler(TornadioXHRPollingHandler):
 
     def send_messages(self, messages):
         if self._index is None:
-            raise HTTPError(401, 'unauthorized')
+            raise HTTPError(401)
 
         data = proto.encode_frames(messages)
 

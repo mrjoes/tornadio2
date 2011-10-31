@@ -226,6 +226,8 @@ class Session(sessioncontainer.SessionBase):
 
                 args = event['args']
 
+                raise Exception('foo')
+
                 # It is kind of magic - if there's only one parameter
                 # and it is dict, unpack dictionary. Otherwise, pass
                 # as *args

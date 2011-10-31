@@ -23,8 +23,8 @@ Upgrading from first TornadIO version
 TornadIO has some incompatible API changes.
 
 1. Instead of having one rule and a router handler, TornadIO2 exposes transports
-as first-class Tornado handlers through appropriate URL. This saves some memory per active connection,
-because instead of having two handlers per request, now it will use one.
+as first-class Tornado handlers. This saves some memory per active connection,
+because instead of having two handlers per request, you will now have only one.
 This change affected how TornadIO2 is initialized and plugged into your Tornado application:
 ::
 	ChatServer = tornadio2.router.TornadioServer(ChatConnection)

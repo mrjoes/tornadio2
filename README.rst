@@ -100,7 +100,7 @@ Acknowledgments
 ---------------
 
 New feature of the socket.io 0.7+. When you send message to the client,
-you now have way to get notified when client received the message. To use this, pass a
+you now have way to get notified when client receives the message. To use this, pass a
 callback function when sending a message:
 ::
     class MyConnection(SocketConnection):
@@ -114,7 +114,7 @@ callback function when sending a message:
 Events
 ------
 
-Instead of having "just" messages, socket.io 0.7 introduced new concept of events.
+Instead of having "just" messages, socket.io 0.7 introduced new concept - event.
 Event is just a name and collection of parameters.
 
 TornadIO2 provides easy-to-use syntax sugar which emulates RPC calls from the client
@@ -235,17 +235,17 @@ This variable is also available for multiplexed connections and will contain que
 parameters from the socket.io endpoint connection request.
 
 3. There's major behavioral change in exception handling. If something blows up and
-it not handled, whole socket.io connection is closed. In previous TornadIO version,
-it was silently dropping currently open transport connection and expecting for socket.io
-to reconnect.
+is not handled, whole connection is closed (including any running multiplexed connections).
+In previous TornadIO version it was silently dropping currently open transport connection
+and expecting for socket.io to reconnect.
 
 4. Socket.IO 0.7 dropped support for xhr-multipart transport, so you can safely remove it
-from your configuration file
+from your configuration file.
 
 Bugs and Workarounds
 --------------------
 
-There are some known bugs in socket.io (last time I checked, it was 0.8.6)
+There are some known bugs in socket.io (valid for socket.io-client 0.8.6)
 
 Connect after disconnect
 ^^^^^^^^^^^^^^^^^^^^^^^^

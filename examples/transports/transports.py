@@ -17,45 +17,32 @@ class IndexHandler(tornado.web.RequestHandler):
 
 class SocketIOHandler(tornado.web.RequestHandler):
     def get(self):
-        self.render('socket.io.js')
+        self.render('../socket.io.js')
 
 
 class ChatConnection(tornadio2.conn.SocketConnection):
     # Class level variable
     participants = set()
 
-    def ack(self, message):
-        print 'GOT ACK!'
-
     def on_open(self, info):
         self.send("Welcome from the server.")
-
         self.participants.add(self)
 
     def on_message(self, message):
         # Pong message back
         for p in self.participants:
-            p.send(message, self.ack)
+            p.send(message)
 
     def on_close(self):
         self.participants.remove(self)
 
-    def get_endpoint(self, endpoint):
-        return ChatConnection
-
-    @tornadio2.conn.event('test')
-    def test(self, msg):
-        self.emit('test', msg=msg)
-
-#use the routes classmethod to build the correct resource
+# Create chat server
 ChatServer = tornadio2.router.TornadioServer(ChatConnection)
 
-#configure the Tornado application
-routes = [(r"/", IndexHandler), (r"/socket.io.js", SocketIOHandler)]
-routes.extend(ChatServer.urls)
-
+# Create application
 application = tornado.web.Application(
-    routes,
+    ChatServer.apply_routes([(r"/", IndexHandler),
+                             (r"/socket.io.js", SocketIOHandler)]),
     flash_policy_port = 843,
     flash_policy_file = op.join(ROOT, 'flashpolicy.xml'),
     socket_io_port = 8001

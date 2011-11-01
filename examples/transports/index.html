@@ -5,7 +5,7 @@
   <script src="socket.io.js"></script>
   <script>WEB_SOCKET_SWF_LOCATION = 'http://cdn.socket.io/stable/WebSocketMain.swf';</script>
   <script>
-    var chat = null, ping = null;
+    var conn = null;
     $(function() {
 
       function log(msg) {
@@ -15,57 +15,48 @@
       }
 
       function connect() {
-        disconnect();
+        //disconnect();
 
-        var transports = $('#protocols input:checked').map(function(){
-            return $(this).attr('id');
+        // Socket.IO magic
+        var transports = [];
+        $('#protocols input:checked').each(function(){
+            return transports.push($(this).attr('id'));
         });
 
-        chat = io.connect('http://localhost:8001/chat', {
+        // Hack to work around bug 251
+        // https://github.com/LearnBoost/socket.io-client/issues/251
+        io.j = [];
+        io.sockets = [];
+
+        conn = io.connect('http://localhost:8001/', {
                   transports: transports,
                   rememberTransport: false
                });
-        ping = io.connect('http://localhost:8001/ping', {
-                  transports: transports,
-                  rememberTransport: false
-        });
 
         log('Connecting...');
 
-        chat.on('connect', function() {
-          log('Chat Connected.');
+        conn.on('connect', function() {
+          log('Connected.');
           update_ui();
         });
 
-        chat.on('message', function(data) {
-          log('Chat Received: ' + data);
+        conn.on('message', function(data) {
+          log('Received: ' + data);
         });
 
-        chat.on('disconnect', function(data) {
-          log('Chat Disconnected.');
-          sock = null;
+        conn.on('disconnect', function(data) {
+          log('Disconnected.');
+          conn = null;
           update_ui();
-        });
-
-        ping.on('connect', function() {
-          log('Ping Connected');
-        });
-
-        ping.on('message', function(data) {
-          log('Ping Received: ' + data);
-        });
-
-        ping.on('disconnect', function(data) {
-          log('Ping Disconnected');
         });
       }
 
       function disconnect() {
-        if (chat != null) {
+        if (conn != null) {
           log('Disconnecting...');
 
-          chat.disconnect();
-          chat = null;
+          conn.disconnect();
+          conn = null;
 
           update_ui();
         }
@@ -74,11 +65,11 @@
       function update_ui() {
         var msg = '';
 
-        if (chat == null || !chat.connected) {
+        if (conn == null || !conn.socket || !conn.socket.connected) {
           msg = 'disconnected';
           $('#connect').text('Connect');
         } else {
-          msg = 'connected (' + chat.transport.type + ')';
+          msg = 'connected (' + conn.socket.transport.name + ')';
           $('#connect').text('Disconnect');
         }
 
@@ -86,7 +77,7 @@
       }
 
       $('#connect').click(function() {
-        if (chat == null) {
+        if (conn == null) {
           connect();
         } else {
           disconnect();
@@ -99,14 +90,8 @@
       $('form').submit(function() {
         var text = $('#text').val();
         log('Sending: ' + text);
-        chat.send(text, function(data) {
-          log('Got ACK!')
-        });
-        ping.send(text);
-
-        chat.emit('test', {msg: text});
-
-        $('#text').val('').focus();        
+        conn.send(text);
+        $('#text').val('').focus();
         return false;
       });
     });
@@ -117,16 +102,12 @@
 <div id="protocols" style="float: right">
   <ul>
     <li>
-      <input id="websocket" type="checkbox" value="WebSocket"></input>
+      <input id="websocket" type="checkbox" value="WebSocket" checked="checked"></input>
       <label for="websocket">websocket</label>
     </li>
     <li>
-      <input id="flashsocket" type="checkbox" value="FlashSocket"></input>
+      <input id="flashsocket" type="checkbox" value="FlashSocket" checked="checked"></input>
       <label for="flashsocket">flashsocket</label>
-    </li>
-    <li>
-      <input id="xhr-multipart" type="checkbox" value="XHR-Multipart" checked="checked"></input>
-      <label for="xhr-multipart">xhr-multipart</label>
     </li>
     <li>
       <input id="xhr-polling" type="checkbox" value="XHR-Polling" checked="checked"></input>

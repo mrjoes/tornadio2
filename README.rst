@@ -114,7 +114,7 @@ Events
 ------
 
 Instead of having "just" messages, socket.io 0.7 introduced new concept of events.
-Event is just a name and collection or parameters.
+Event is just a name and collection of parameters.
 
 TornadIO2 provides easy-to-use syntax sugar which emulates RPC calls from the client
 to your python code. Check following example:
@@ -194,7 +194,7 @@ To start it, do following (assuming you created application object before)::
 SocketServer will automatically start Flash policy server, if required.
 
 
-Upgrading from previous Tornadio
+Upgrading from previous TornadIO
 --------------------------------
 TornadIO2 has some incompatible API changes.
 
@@ -216,7 +216,7 @@ or alternative approach:
     ChatServer = tornadio2.router.TornadioServer(ChatConnection)
     application = tornado.web.Application(ChatServer.apply_routes([(r"/", IndexHandler)]))
 
-2. SocketConnection.on_open was changed to accept single `request` parameter. This parameter
+2. `SocketConnection.on_open` was changed to accept single `request` parameter. This parameter
 is instance of the ConnectionInfo class which contains some helper methods like
 get_argument(), get_cookie(), etc. Also, if you return `False` from your `on_open` handler,
 TornadIO2 will reject connection.
@@ -231,14 +231,15 @@ Example:
                 return False
 
 This variable is also available for multiplexed connections and will contain query string
-parameters from the socket.io endpoint connection request (see below).
+parameters from the socket.io endpoint connection request.
 
 3. There's major behavioral change in exception handling. If something blows up and
 it not handled, whole socket.io connection is closed. In previous TornadIO version,
 it was silently dropping currently open transport connection and expecting for socket.io
 to reconnect.
 
-4. Socket.IO 0.7 dropped support for xhr-multipart transport, so you can safely remove it from your configuration file
+4. Socket.IO 0.7 dropped support for xhr-multipart transport, so you can safely remove it
+from your configuration file
 
 
 Examples

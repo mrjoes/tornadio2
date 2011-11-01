@@ -36,6 +36,8 @@ class TornadioWebSocketHandler(WebSocketHandler):
             self.session.stop_heartbeat()
             self.session.remove_handler(self)
 
+            self.session = None
+
     def on_message(self, message):
         try:
             self.session.raw_message(message)
@@ -52,7 +54,7 @@ class TornadioWebSocketHandler(WebSocketHandler):
 
     def session_closed(self):
         try:
-            self.finish()
+            self.close()
         except Exception:
             logging.debug('Exception', exc_info=True)
         finally:

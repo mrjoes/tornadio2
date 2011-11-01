@@ -75,7 +75,7 @@ class DummyConnection(conn.SocketConnection):
         self.incoming.append(message)
         self.send(message)
 
-    def on_event(self, name, **kwargs):
+    def on_event(self, name, *args, **kwargs):
         self.events.append((name, kwargs))
         self.emit(name, **kwargs)
 
@@ -93,11 +93,17 @@ class DummyConnection(conn.SocketConnection):
         return self.events.popleft()
 
 
-def _get_test_environment(**kwargs):
+class EventConnection(conn.SocketConnection):
+    @conn.event('test')
+    def test(self, a, b):
+        self.emit('test', a=a, b=b)
+
+
+def _get_test_environment(conn=None, **kwargs):
     # Create test environment
     request = DummyRequest(**kwargs)
 
-    server = DummyServer(DummyConnection)
+    server = DummyServer(conn or DummyConnection)
     session = server.create_session(request)
     transport = DummyTransport(session, request)
 
@@ -183,11 +189,29 @@ def test_event():
     # Send event
     transport.recv(proto.event(None, 'test', a=10, b=20))
 
+    # Send event with multiple parameters
+    transport.recv('5:::{"name":"test", "args":[10, 20]}')
+
     # Check incoming
     eq_(conn.pop_event(), ('test', dict(a=10, b=20)))
 
     # Check outgoing
     eq_(transport.pop_outgoing(), proto.event(None, 'test', a=10, b=20))
+
+
+@raises(TypeError)
+def test_failed_event():
+    # Create environment
+    server, session, transport, conn = _get_test_environment(EventConnection)
+
+    # Send event
+    transport.recv(proto.event(None, 'test', a=10, b=20))
+
+    # Check response
+    eq_(transport.pop_outgoing(), proto.event(None, 'test', a=10, b=20))
+
+    # Throw invalid event
+    transport.recv(proto.event(None, 'test', a=10))
 
 
 @raises(JSONDecodeError)

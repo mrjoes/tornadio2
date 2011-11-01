@@ -151,8 +151,21 @@ class SocketConnection(object):
         handler = self._events.get(name)
 
         if handler:
-            # TODO: Catch exception
-            handler(self, **kwargs)
+            try:
+                if args:
+                    handler(self, *args)
+                else:
+                    handler(self, **kwargs)
+            except TypeError:
+                if args:
+                    logging.error(('Attempted to call event handler %s ' +
+                                  'with %s arguments.') % (handler,
+                                                           repr(args)))
+                else:
+                    logging.error(('Attempted to call event handler %s ' +
+                                  'with %s arguments.') % (handler,
+                                                           repr(kwargs)))
+                raise
         else:
             logging.error('Invalid event name: %s' % name)
 

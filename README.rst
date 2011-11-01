@@ -29,14 +29,14 @@ If you're familiar with Tornado, do following to add support for Socket.IO to yo
 1. Derive from tornadio.SocketConnection class and override on_message method (on_open/on_close are optional):
 ::
 
-	class MyConnection(tornadio.SocketConnection):
-	    def on_message(self, message):
-	 	   pass
+    class MyConnection(tornadio.SocketConnection):
+        def on_message(self, message):
+           pass
 
 2. Create TornadIO2 server for your connection:
 ::
 
-	MyServer = tornadio2.router.TornadioServer(MyConnection)
+    MyServer = tornadio2.router.TornadioServer(MyConnection)
 
 3. Add your handler routes to the Tornado application:
 ::
@@ -59,40 +59,40 @@ use built-in routing mechanism or implement your own.
 
 To use built-in connection routing:
 ::
-	class ChatConnection(SocketConnection):
-		def on_message(self, msg):
-			pass
+    class ChatConnection(SocketConnection):
+        def on_message(self, msg):
+            pass
 
-	class PingConnection(SocketConnection):
-		def on_message(self, msg):
-			pass
+    class PingConnection(SocketConnection):
+        def on_message(self, msg):
+            pass
 
-	class MyRouterConnection(SocketConnection):
-		__endpoints__ = {'/chat': ChatConnection,
-						 '/ping': PingConnection}
+    class MyRouterConnection(SocketConnection):
+        __endpoints__ = {'/chat': ChatConnection,
+                         '/ping': PingConnection}
 
-		def on_message(self, msg):
-			pass
+        def on_message(self, msg):
+            pass
 
-	MyServer = tornadio2.router.TornadioServer(MyRouterConnection)
+    MyServer = tornadio2.router.TornadioServer(MyRouterConnection)
 
 On client side, create two connections:
 ::
-	var chat = io.connect('http://myserver/chat'),
-	    ping = io.connect('http://myserver/ping');
+    var chat = io.connect('http://myserver/chat'),
+        ping = io.connect('http://myserver/ping');
 
-	chat.send('Hey Chat');
-	ping.send('Hey Ping');
+    chat.send('Hey Chat');
+    ping.send('Hey Ping');
 
 So, you have to have three connection classes for 2 virtual connections - that's how
 socket.io works. If you want, you can send some messages to MyRouterConnection as well,
 if you will connect like this:
 ::
-	var conn = io.connect('http://myserver'),
-		chat = io.connect('http://myserver/chat'),
-		ping = io.connect('http://myserver/ping');
+    var conn = io.connect('http://myserver'),
+        chat = io.connect('http://myserver/chat'),
+        ping = io.connect('http://myserver/ping');
 
-		conn.send('Hey Connection!')
+        conn.send('Hey Connection!')
 
 
 Acknowledgments
@@ -102,12 +102,12 @@ New feature of the socket.io 0.7+. When you send message to the client,
 you now have way to get notified when client received the message. To use this, pass a
 callback function when sending a message:
 ::
-	class MyConnection(SocketConnection):
-		def on_message(self, msg):
-			self.send(msg, self.my_callback)
+    class MyConnection(SocketConnection):
+        def on_message(self, msg):
+            self.send(msg, self.my_callback)
 
-		def my_callback(self, msg):
-			print 'Got ack for my message: %s' % message
+        def my_callback(self, msg):
+            print 'Got ack for my message: %s' % message
 
 
 Events
@@ -119,16 +119,16 @@ Event is just a name and collection or parameters.
 TornadIO2 provides easy-to-use syntax sugar which emulates RPC calls from the client
 to your python code. Check following example:
 ::
-	class MyConnection(SocketConnection):
-		@event('hello')
-		def test(self, name):
-			print 'Hello %s' % name
+    class MyConnection(SocketConnection):
+        @event('hello')
+        def test(self, name):
+            print 'Hello %s' % name
 
-			self.emit('thanks', name=name)
+            self.emit('thanks', name=name)
 
 In your client code, to call this event, do something like:
 ::
-	sock.emit('hello', {name: 'Joes'});
+    sock.emit('hello', {name: 'Joes'});
 
 However, take care - if method signature does not match (missing parameters, extra
 parameters, etc), your connection will blow up and self destruct.
@@ -136,19 +136,19 @@ parameters, etc), your connection will blow up and self destruct.
 If you don't like this event handling approach, just override `on_event` in your
 socket connection class and handle them by yourself:
 ::
-	class MyConnection(SocketConnection):
-		def on_event(self, name, *args, **kwargs):
-			if name == 'hello':
-				print 'Hello %s' % (kwargs['name'])
+    class MyConnection(SocketConnection):
+        def on_event(self, name, *args, **kwargs):
+            if name == 'hello':
+                print 'Hello %s' % (kwargs['name'])
 
-			self.emit('thanks', name=kwargs['name'])
+            self.emit('thanks', name=kwargs['name'])
 
 There's also some magic involved in event message parsing to make it easier to work
 with events.
 
 If you send data from client using following code:
 ::
-	sock.emit('test', {a: 10, b: 10});
+    sock.emit('test', {a: 10, b: 10});
 
 
 TornadIO2 will unpack dictionary into `kwargs` parameters and pass it to the
@@ -156,7 +156,7 @@ TornadIO2 will unpack dictionary into `kwargs` parameters and pass it to the
 unpack them into `kwargs` and will just pass parameters as `args`. For example, this
 code will lead to `args` being passed to `on_event` handler:
 ::
-	sock.emit('test', 1, 2, 3, {a: 10, b: 10});
+    sock.emit('test', 1, 2, 3, {a: 10, b: 10});
 
 
 Goodies
@@ -203,18 +203,18 @@ as first-class Tornado handlers. This saves some memory per active connection,
 because instead of having two handlers per request, you will now have only one.
 This change affected how TornadIO2 is initialized and plugged into your Tornado application:
 ::
-	ChatServer = tornadio2.router.TornadioServer(ChatConnection)
-	# Fill your routes here
-	routes = [(r"/", IndexHandler)]
-	# Extend list of routes with Tornadio2 URLs
-	routes.extend(ChatServer.urls)
+    ChatServer = tornadio2.router.TornadioServer(ChatConnection)
+    # Fill your routes here
+    routes = [(r"/", IndexHandler)]
+    # Extend list of routes with Tornadio2 URLs
+    routes.extend(ChatServer.urls)
 
-	application = tornado.web.Application(routes)
+    application = tornado.web.Application(routes)
 
 or alternative approach:
 ::
-	ChatServer = tornadio2.router.TornadioServer(ChatConnection)
-	application = tornado.web.Application(ChatServer.apply_routes([(r"/", IndexHandler)]))
+    ChatServer = tornadio2.router.TornadioServer(ChatConnection)
+    application = tornado.web.Application(ChatServer.apply_routes([(r"/", IndexHandler)]))
 
 2. SocketConnection.on_open was changed to accept single `request` parameter. This parameter
 is instance of the ConnectionInfo class which contains some helper methods like
@@ -223,12 +223,12 @@ TornadIO2 will reject connection.
 
 Example:
 ::
-	class MyConnection(SocketConnection):
-		def on_open(self, request):
-			self.user_id = request.get_argument('id')
+    class MyConnection(SocketConnection):
+        def on_open(self, request):
+            self.user_id = request.get_argument('id')
 
-			if not self.user_id:
-				return False
+            if not self.user_id:
+                return False
 
 This variable is also available for multiplexed connections and will contain query string
 parameters from the socket.io endpoint connection request (see below).

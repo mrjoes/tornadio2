@@ -20,8 +20,8 @@ most of the features found in original Socket.IO server software.
 
 Getting Started
 ---------------
-In order to start working with the TornadIO library, you need to know some basic concepts
-on how Tornado works. If you don't, please read Tornado tutorial, which can be found
+In order to start working with the TornadIO library, you need to know some basic Tornado
+knowledge. If you don't know how to use it, please read Tornado tutorial, which can be found
 `here <http://www.tornadoweb.org/documentation#tornado-walk-through>`_.
 
 If you're familiar with Tornado, do following to add support for Socket.IO to your application:
@@ -54,10 +54,11 @@ Multiplexed connections
 Starting from socket.io 0.7, there's new concept of multiplexed connections:
 you can have multiple "virtual" connections working through one transport connection.
 TornadIO2 supports this transparently, but you have to tell TornadIO how to route
-multiplexed connection requests when creating connection class. You can either
-use built-in routing mechanism or implement your own.
+multiplexed connection requests. To accomplish this, you can either use built-in
+routing mechanism or implement your own.
 
-To use built-in connection routing:
+To use built-in routing, declare and initialize `__endpoints__` dictionary in
+your main connection class:
 ::
     class ChatConnection(SocketConnection):
         def on_message(self, msg):
@@ -241,6 +242,33 @@ to reconnect.
 4. Socket.IO 0.7 dropped support for xhr-multipart transport, so you can safely remove it
 from your configuration file
 
+Bugs and Workarounds
+--------------------
+
+There are some known bugs in socket.io (last time I checked, it was 0.8.6)
+
+Connect after disconnect
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Unfortunately, disconnection is bugged in socket.io. If you close socket connection,
+`io.connect` to the same endpoint will silently fail. If you try to forcibly connect
+associated socket, you will end up having your callbacks called twice, etc.
+
+For now, if your main connection was closed, you have two options:
+::
+    var conn = io.connect(addr, {'force new connection': true});
+or alternative approach:
+::
+    io.j = [];
+    io.sockets = [];
+
+If you use first approach, you will lose multiplexing for good.
+
+If you use second approach, apart of it being quite hackish, it will clean up existing
+sockets, so socket.io will have to create new one and will use it to connect to endpoints.
+Also, instead of clearing `io.sockets`, you can remove socket which matches your URL.
+
+On a side note, if you can avoid using `disconnect()` for socket, do so.
 
 Examples
 --------

@@ -17,18 +17,20 @@
       function connect() {
         //disconnect();
 
-        // Socket.IO magic
+        // Socket.IO magic, $.map does not work and crashes socket.io.
         var transports = [];
         $('#protocols input:checked').each(function(){
             return transports.push($(this).attr('id'));
         });
 
-        // Hack to work around bug 251
+        // Hack to work around bug 251, I really hope it is going to be fixed.
         // https://github.com/LearnBoost/socket.io-client/issues/251
+        // Alternative way to do full reconnect is to pass 'force new connection',
+        // but you will lose multiplexing.
         io.j = [];
         io.sockets = [];
-
         conn = io.connect('http://localhost:8001/', {
+                  //'force new connection': true,
                   transports: transports,
                   rememberTransport: false
                });

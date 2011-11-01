@@ -76,8 +76,6 @@ To use built-in connection routing:
 
 	MyServer = tornadio2.router.TornadioServer(MyRouterConnection)
 
-	...
-
 On client side, create two connections:
 ::
 	var chat = io.connect('http://myserver/chat'),

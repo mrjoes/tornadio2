@@ -1,21 +1,74 @@
 import urlparse
-import time
 import logging
+
+from tornado.web import HTTPError
 
 from tornadio2 import sessioncontainer, proto, periodic
 
 
+class ConnectionInfo(object):
+    def __init__(self, ip, arguments, cookies):
+        self.ip = ip
+        self.cookies = cookies
+        self.arguments = arguments
+
+        print arguments
+
+    def get_argument(self, name):
+        val = self.arguments.get(name)
+        if val:
+            return val[0]
+        return None
+
+    def get_cookie(self, name):
+        return self.cookies.get(name)
+
+
 class Session(sessioncontainer.SessionBase):
-    def __init__(self, conn, server, session_id=None, expiry=None):
+    """Socket.IO session implementation.
+
+    Session has some publicly accessible properties:
+    `server`
+        Server association. Server contains io_loop instance, settings, etc.
+    `remote_ip`
+        Remote IP
+    `is_closed`
+        Check if session is closed or not.
+    """
+    def __init__(self, conn, server, request, expiry=None):
+        """Session constructor.
+
+        `conn`
+            Default connection class
+        `server`
+            Associated server
+        `handler`
+            Request handler that created new session
+        `expiry`
+            Session expiry
+        """
         # Initialize session
-        super(Session, self).__init__(session_id, expiry)
+        super(Session, self).__init__(None, expiry)
 
         self.server = server
         self.send_queue = []
         self.handler = None
 
+        self.remote_ip = request.remote_ip
+
         # Create connection instance
         self.conn = conn(self)
+
+        # Call on_open.
+        info = ConnectionInfo(request.remote_ip,
+                              request.arguments,
+                              request.cookies)
+
+        result = self.conn.on_open(info)
+        if result is not None and not result:
+            raise HTTPError(401)
+
+        # If everything is fine - continue
         self.send_message(proto.connect())
 
         # Heartbeat related stuff
@@ -26,11 +79,9 @@ class Session(sessioncontainer.SessionBase):
         # Endpoints
         self.endpoints = dict()
 
-    def open(self, *args, **kwargs):
-        self.conn.on_open(*args, **kwargs)
-
     # Session callbacks
     def on_delete(self, forced):
+        """Session expiration callback"""
         # Do not remove connection if it was not forced and there's running connection
         if not forced and self.handler is not None and not self.is_closed:
             self.promote()
@@ -38,17 +89,30 @@ class Session(sessioncontainer.SessionBase):
             self.close()
 
     # Add session
-    def set_handler(self, handler, *args, **kwargs):
+    def set_handler(self, handler):
+        """Set active handler for the session"""
+        # Check if session already has associated handler
         if self.handler is not None:
-            # Attempted to override handler
             return False
 
+        # If IP address don't match - refuse connection
+        if handler.request.remote_ip != self.remote_ip:
+            logging.error('Attempted to attach to session %s (%s) from different IP (%s)' % (
+                          self.session_id,
+                          self.remote_ip,
+                          handler.request.remote_ip
+                          ))
+            return False
+
+        # Associate handler and promote
         self.handler = handler
         self.promote()
 
         return True
 
     def remove_handler(self, handler):
+        """Remove active handler from the session"""
+        # Attempt to remove another handler
         if self.handler != handler:
             raise Exception('Attempted to remove invalid handler')
 
@@ -56,12 +120,17 @@ class Session(sessioncontainer.SessionBase):
         self.promote()
 
     def send_message(self, pack):
+        """Send socket.io encoded message"""
         logging.debug('<<< ' + pack)
+
+        # TODO: Possible optimization if there's on-going connection - there's no
+        # need to queue messages
 
         self.send_queue.append(pack)
         self.flush()
 
     def flush(self):
+        """Flush message queue if there's an active connection running"""
         if self.handler is None:
             return
 
@@ -78,6 +147,12 @@ class Session(sessioncontainer.SessionBase):
 
     # Close connection with all endpoints or just one endpoint
     def close(self, endpoint=None):
+        """Close session or endpoint connection.
+
+        `endpoint`
+            If endpoint is passed, will close open endpoint connection. Otherwise
+            will close whole socket.
+        """
         if endpoint is None:
             if not self.conn.is_closed:
                 # Close child connections
@@ -97,14 +172,17 @@ class Session(sessioncontainer.SessionBase):
                 if self.handler is not None:
                     self.handler.session_closed()
         else:
+            # Disconnect endpoint
             self.disconnect_endpoint(endpoint)
 
     @property
     def is_closed(self):
+        """Check if session was closed"""
         return self.conn.is_closed
 
     # Heartbeats
     def reset_heartbeat(self):
+        """Reset hearbeat timer"""
         self.stop_heartbeat()
 
         self._heartbeat_timer = periodic.Callback(self._heartbeat,
@@ -113,15 +191,18 @@ class Session(sessioncontainer.SessionBase):
         self._heartbeat_timer.start()
 
     def stop_heartbeat(self):
+        """Stop heartbeat"""
         if self._heartbeat_timer is not None:
             self._heartbeat_timer.stop()
             self._heartbeat_timer = None
 
     def delay_heartbeat(self):
+        """Delay heartbeat"""
         if self._heartbeat_timer is not None:
             self._heartbeat_timer.delay()
 
     def _heartbeat(self):
+        """Heartbeat callback"""
         self.send_message(proto.heartbeat())
 
         self._missed_heartbeats += 1
@@ -132,6 +213,11 @@ class Session(sessioncontainer.SessionBase):
 
     # Endpoints
     def connect_endpoint(self, url):
+        """Connect endpoint from URL.
+
+        `url`
+            socket.io endpoint URL.
+        """
         urldata = urlparse.urlparse(url)
 
         endpoint = urldata.path
@@ -148,12 +234,16 @@ class Session(sessioncontainer.SessionBase):
 
         args = urlparse.parse_qs(urldata.query)
 
-        # TODO: Add support for multiple arguments with same name
-        final_args = dict((k,v[0]) for k,v in args.iteritems()) 
+        info = ConnectionInfo(self.remote_ip, args, dict())
 
-        conn.on_open(**final_args)
+        conn.on_open(info)
 
     def disconnect_endpoint(self, endpoint):
+        """Disconnect endpoint
+
+        `endpoint`
+            endpoint name
+        """
         if endpoint not in self.endpoints:
             logging.error('Invalid endpoint for disconnect %s' % endpoint)
             return
@@ -166,6 +256,11 @@ class Session(sessioncontainer.SessionBase):
         self.send_message(proto.disconnect(endpoint))
 
     def get_connection(self, endpoint):
+        """Get connection object.
+
+        `endpoint`
+            Endpoint name. If set to None, will return default connection object.
+        """
         if endpoint:
             return self.endpoints.get(endpoint)
         else:
@@ -173,19 +268,22 @@ class Session(sessioncontainer.SessionBase):
 
     # Message handler
     def raw_message(self, msg):
+        """Socket.IO message handler.
+
+        `msg`
+            Raw socket.io message to process.
+        """
         try:
             logging.debug('>>> ' + msg)
 
             parts = msg.split(':', 3)
+            if len(parts) == 3:
+                msg_type, msg_id, msg_endpoint = parts
+                msg_data = None
+            else:
+                msg_type, msg_id, msg_endpoint, msg_data = parts
 
-            msg_type = parts[0]
-            msg_id = parts[1]
-            msg_endpoint = parts[2]
-            msg_data = None
-            if len(parts) > 3:
-                msg_data = parts[3]
-
-            # Packets that don't require valid connection
+            # Packets that don't require valid endpoint
             if msg_type == proto.DISCONNECT:
                 if not msg_endpoint:
                     self.close()
@@ -244,7 +342,7 @@ class Session(sessioncontainer.SessionBase):
                 conn.deque_ack(int(ack_data[0]))
             elif msg_type == proto.ERROR:
                 # TODO: Pass it to handler?
-                logging.error('Incoming error: %s' % msg_data)            
+                logging.error('Incoming error: %s' % msg_data)
             elif msg_type == proto.NOOP:
                 pass
         except Exception, ex:

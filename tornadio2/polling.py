@@ -31,7 +31,7 @@ class TornadioPollingHandlerBase(RequestHandler):
             raise HTTPError(401)
 
         # If session is closed, but there are some pending messages left - make sure to send them
-        if session.is_closed and not session.send_queue:        
+        if session.is_closed and not session.send_queue:
             raise HTTPError(401)
 
         return session
@@ -84,7 +84,7 @@ class TornadioPollingHandlerBase(RequestHandler):
         """Close associated connection"""
         self._detach()
 
-    def on_connection_close(self):        
+    def on_connection_close(self):
         self._detach()
 
     @asynchronous
@@ -203,7 +203,7 @@ class TornadioHtmlFileHandler(TornadioPollingHandlerBase):
             raise HTTPError(401)
 
         self.set_header('Content-Type', 'text/html; charset=UTF-8')
-        self.set_header('Connection', 'keep-alive')        
+        self.set_header('Connection', 'keep-alive')
         self.write('<html><body><script>var _ = function (msg) { parent.s._(msg, document); };</script>' + (' ' * 174))
         self.flush()
 
@@ -230,6 +230,7 @@ class TornadioHtmlFileHandler(TornadioPollingHandlerBase):
             logging.debug('Exception', exc_info=True)
         finally:
             self._detach()
+
 
 class TornadioJSONPHandler(TornadioXHRPollingHandler):
     def initialize(self, server):
@@ -258,7 +259,7 @@ class TornadioJSONPHandler(TornadioXHRPollingHandler):
         if not data.startswith('d='):
             logging.error('Malformed JSONP POST request')
             raise HTTPError(403)
-            
+
         data = urllib.unquote(data[2:])
 
         # Process packets one by one
@@ -270,7 +271,7 @@ class TornadioJSONPHandler(TornadioXHRPollingHandler):
                 # Close session if something went wrong
                 self.session.close()
 
-        self.set_header('Content-Type', 'text/plain; charset=UTF-8')        
+        self.set_header('Content-Type', 'text/plain; charset=UTF-8')
         self.finish()
 
     def send_messages(self, messages):

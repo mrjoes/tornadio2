@@ -41,7 +41,7 @@ class TornadioWebSocketHandler(WebSocketHandler):
             self.session.raw_message(message)
         except Exception:
             # Close session on exception
-            self.session.close()            
+            self.session.close()
 
     def on_close(self):
         self._detach()
@@ -57,6 +57,7 @@ class TornadioWebSocketHandler(WebSocketHandler):
             logging.debug('Exception', exc_info=True)
         finally:
             self._detach()
+
 
 class TornadioFlashSocketHandler(WebSocketHandler):
     def initialize(self, server):

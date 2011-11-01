@@ -27,7 +27,7 @@ class ChatConnection(tornadio2.conn.SocketConnection):
     def ack(self, message):
         print 'GOT ACK!'
 
-    def on_open(self, *args, **kwargs):
+    def on_open(self, info):
         self.send("Welcome from the server.")
 
         self.participants.add(self)

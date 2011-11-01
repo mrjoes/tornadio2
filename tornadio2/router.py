@@ -30,7 +30,7 @@ DEFAULT_SETTINGS = {
     # you absolutely sure that new value will work.
     'heartbeat_interval': 12,
     # Enabled protocols
-    'enabled_protocols': ['websocket', 'flashsocket', 'xhr-polling', 
+    'enabled_protocols': ['websocket', 'flashsocket', 'xhr-polling',
                           'jsonp-polling', 'htmlfile'],
     # XHR-Polling request timeout, in seconds
     'xhr_polling_timeout': 20,
@@ -46,7 +46,7 @@ class HandshakeHandler(RequestHandler):
         if version != '1':
             raise HTTPError(503, "Invalid socket.io protocol version")
 
-        sess = self.server.create_session()
+        sess = self.server.create_session(self.request)
 
         # TODO: Support for heartbeat
         # TODO: Fix heartbeat timeout
@@ -61,16 +61,13 @@ class HandshakeHandler(RequestHandler):
         jsonp = self.get_argument('jsonp', None)
         if jsonp is not None:
             self.set_header('Content-Type', 'application/javascript; charset=UTF-8')
-            
+
             data = 'io.j[%s](%s);' % (jsonp, proto.json_dumps(data))
         else:
             self.set_header('Content-Type', 'text/plain; charset=UTF-8')
-        
+
         self.write(data)
         self.finish()
-
-        # Session is considered to be opened, according to docs
-        sess.open(*args, **kwargs)
 
 
 class TornadioServer(object):
@@ -129,11 +126,11 @@ class TornadioServer(object):
         routes.extend(self._transport_urls)
         return routes
 
-    def create_session(self):
+    def create_session(self, request):
         # TODO: Possible optimization here for settings.get
         s = session.Session(self._connection,
                             self,
-                            None,
+                            request,
                             self.settings.get('session_expiry')
                             )
 

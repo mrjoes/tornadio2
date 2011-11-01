@@ -2,8 +2,6 @@
 TornadIO2
 =========
 
-.WIP.
-
 Contributors
 ------------
 
@@ -20,7 +18,7 @@ most of the features found in original Socket.IO server software.
 
 Getting Started
 ---------------
-In order to start working with the TornadIO2 library, you need to know some basic Tornado
+In order to start working with the TornadIO2 library, you have to have some basic Tornado
 knowledge. If you don't know how to use it, please read Tornado tutorial, which can be found
 `here <http://www.tornadoweb.org/documentation#tornado-walk-through>`_.
 
@@ -60,6 +58,7 @@ routing mechanism or implement your own.
 To use built-in routing, declare and initialize `__endpoints__` dictionary in
 your main connection class:
 ::
+
     class ChatConnection(SocketConnection):
         def on_message(self, msg):
             pass
@@ -79,6 +78,7 @@ your main connection class:
 
 On client side, create two connections:
 ::
+
     var chat = io.connect('http://myserver/chat'),
         ping = io.connect('http://myserver/ping');
 
@@ -89,6 +89,7 @@ So, you have to have three connection classes for 2 virtual connections - that's
 socket.io works. If you want, you can send some messages to MyRouterConnection as well,
 if you will connect like this:
 ::
+
     var conn = io.connect('http://myserver'),
         chat = io.connect('http://myserver/chat'),
         ping = io.connect('http://myserver/ping');
@@ -103,6 +104,7 @@ New feature of the socket.io 0.7+. When you send message to the client,
 you now have way to get notified when client receives the message. To use this, pass a
 callback function when sending a message:
 ::
+
     class MyConnection(SocketConnection):
         def on_message(self, msg):
             self.send(msg, self.my_callback)
@@ -120,6 +122,7 @@ Event is just a name and collection of parameters.
 TornadIO2 provides easy-to-use syntax sugar which emulates RPC calls from the client
 to your python code. Check following example:
 ::
+
     class MyConnection(SocketConnection):
         @event('hello')
         def test(self, name):
@@ -129,6 +132,7 @@ to your python code. Check following example:
 
 In your client code, to call this event, do something like:
 ::
+
     sock.emit('hello', {name: 'Joes'});
 
 However, take care - if method signature does not match (missing parameters, extra
@@ -137,6 +141,7 @@ parameters, etc), your connection will blow up and self destruct.
 If you don't like this event handling approach, just override `on_event` in your
 socket connection class and handle them by yourself:
 ::
+
     class MyConnection(SocketConnection):
         def on_event(self, name, *args, **kwargs):
             if name == 'hello':
@@ -149,6 +154,7 @@ with events.
 
 If you send data from client using following code:
 ::
+
     sock.emit('test', {a: 10, b: 10});
 
 
@@ -157,6 +163,7 @@ TornadIO2 will unpack dictionary into `kwargs` parameters and pass it to the
 unpack them into `kwargs` and will just pass parameters as `args`. For example, this
 code will lead to `args` being passed to `on_event` handler:
 ::
+
     sock.emit('test', 1, 2, 3, {a: 10, b: 10});
 
 
@@ -214,6 +221,7 @@ This change affected how TornadIO2 is initialized and plugged into your Tornado 
 
 or alternative approach:
 ::
+
     ChatServer = tornadio2.router.TornadioServer(ChatConnection)
     application = tornado.web.Application(ChatServer.apply_routes([(r"/", IndexHandler)]))
 
@@ -224,6 +232,7 @@ TornadIO2 will reject connection.
 
 Example:
 ::
+
     class MyConnection(SocketConnection):
         def on_open(self, request):
             self.user_id = request.get_argument('id')
@@ -256,9 +265,12 @@ associated socket, you will end up having your callbacks called twice, etc.
 
 For now, if your main connection was closed, you have two options:
 ::
+
     var conn = io.connect(addr, {'force new connection': true});
+
 or alternative approach:
 ::
+
     io.j = [];
     io.sockets = [];
 

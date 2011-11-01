@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-    tornadio.persistent
-    ~~~~~~~~~~~~~~~~~~~
+    tornadio2.persistent
+    ~~~~~~~~~~~~~~~~~~~~
 
     Persistent transport implementations.
 
@@ -15,10 +15,14 @@ from tornado.websocket import WebSocketHandler
 
 
 class TornadioWebSocketHandler(WebSocketHandler):
-    def initialize(self, server):
-        logging.debug('Initializing WebSocket handler...')
+    # Transport name
+    name = 'websocket'
 
+    """Websocket protocol handler"""
+    def initialize(self, server):
         self.server = server
+
+        logging.debug('Initializing %s handler.' % self.name)
 
     def open(self, session_id):
         self.session = self.server.get_session(session_id)
@@ -62,7 +66,5 @@ class TornadioWebSocketHandler(WebSocketHandler):
 
 
 class TornadioFlashSocketHandler(WebSocketHandler):
-    def initialize(self, server):
-        logging.debug('Initializing FlashSocket handler...')
-
-        super(TornadioFlashSocketHandler, self).initialize(server)
+    # Transport name
+    name = 'flashsocket'

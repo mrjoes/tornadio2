@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-    tornadio.proto
-    ~~~~~~~~~~~~~~
+    tornadio2.proto
+    ~~~~~~~~~~~~~~~
 
     Socket.IO protocol related functions
 
@@ -22,6 +22,7 @@ except ImportError:
             return super(DecimalEncoder, self).default(o)
     json_decimal_args = {"cls": DecimalEncoder}
 
+# Packet ids
 DISCONNECT = '0'
 CONNECT = '1'
 HEARTBEAT = '2'
@@ -32,26 +33,49 @@ ACK = '6'
 ERROR = '7'
 NOOP = '8'
 
+# utf-8 encoded frame separator
 FRAME_SEPARATOR = u'\ufffd'.encode('utf-8')
 
 
 def disconnect(endpoint=None):
+    """Generate disconnect packet.
+
+    `endpoint`
+        Optional endpoint name
+    """
     return '0::%s' % (
         endpoint or ''
         )
 
 
 def connect(endpoint=None):
+    """Generate connect packet.
+
+    `endpoint`
+        Optional endpoint name
+    """
     return '1::%s' % (
         endpoint or ''
         )
 
 
 def heartbeat():
+    """Generate heartbeat message.
+    """
     return '2::'
 
 
 def message(endpoint, msg, message_id=None):
+    """Generate message packet.
+
+    `endpoint`
+        Optional endpoint name
+    `msg`
+        Message to encode. If message is ascii/unicode string, will send message packet.
+        If object or dictionary, will json encode and send as is.
+    `message_id`
+        Optional message id for ACK
+    """
     if (not isinstance(msg, (unicode, str)) and
         isinstance(msg, (object, dict))):
         if msg is not None:
@@ -72,6 +96,17 @@ def message(endpoint, msg, message_id=None):
 
 
 def event(endpoint, name, message_id=None, **kwargs):
+    """Generate event message.
+
+    `endpoint`
+        Optional endpoint name
+    `name`
+        Event name
+    `message_id`
+        Optional message id for ACK
+    `kwargs`
+        Optional event arguments.
+    """
     evt = dict(
         name=name,
         args=[kwargs]
@@ -85,29 +120,62 @@ def event(endpoint, name, message_id=None, **kwargs):
 
 
 def ack(endpoint, message_id):
+    """Generate ACK packet.
+
+    `endpoint`
+        Optional endpoint name
+    `message_id`
+        Message id to acknowledge
+    """
     return '6::%s:%s' % (endpoint or '',
                          message_id)
 
 
 def error(endpoint, reason, advice=None):
+    """Generate error packet.
+
+    `endpoint`
+        Optional endpoint name
+    `reason`
+        Error reason
+    `advice`
+        Error advice
+    """
     return '7::%s:%s+%s' % (endpoint or '',
                             (reason or '').encode('utf-8'),
                             (advice or '').encode('utf-8'))
 
 
 def noop():
+    """Generate noop packet."""
     return '8::'
 
 
 def json_dumps(msg):
+    """Dump object as a json string
+
+    `msg`
+        Object to dump
+    """
     return json.dumps(msg)
 
 
 def json_load(msg):
+    """Load json
+
+    `msg`
+        json encoded object
+    """
     return json.loads(msg)
 
 
 def decode_frames(data):
+    """Decode socket.io encoded messages. Returns list of packets.
+
+    `data`
+        encoded messages
+
+    """
     # Single message - nothing to decode here
     if not data.startswith(FRAME_SEPARATOR):
         return [data]
@@ -138,6 +206,11 @@ def decode_frames(data):
 
 # Encode expects packets in UTF-8 encoding
 def encode_frames(packets):
+    """Encode list of packets.
+
+    `packets`
+        List of packets to encode
+    """
     # No packets - return empty string
     if not packets:
         return ''

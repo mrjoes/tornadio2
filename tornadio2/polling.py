@@ -22,6 +22,8 @@ class TornadioPollingHandlerBase(RequestHandler):
         self.server = server
         self.session = None
 
+        logging.debug('Initializing %s transport.' % self.name)
+
     def _get_session(self, session_id):
         # Get session
         session = self.server.get_session(session_id)
@@ -116,6 +118,9 @@ class TornadioPollingHandlerBase(RequestHandler):
 
 
 class TornadioXHRPollingHandler(TornadioPollingHandlerBase):
+    # Transport name
+    name = 'xhr-polling'
+
     def initialize(self, server):
         super(TornadioXHRPollingHandler, self).initialize(server)
 
@@ -186,6 +191,7 @@ class TornadioXHRPollingHandler(TornadioPollingHandlerBase):
         finally:
             self._detach()
 
+
 class TornadioHtmlFileHandler(TornadioPollingHandlerBase):
     """IE HtmlFile protocol implementation.
 
@@ -194,6 +200,9 @@ class TornadioHtmlFileHandler(TornadioPollingHandlerBase):
     Unfortunately, it is unknown if this transport works, as socket.io
     client-side fails in IE7/8.
     """
+    # Transport name
+    name = 'htmlfile'
+
     @asynchronous
     def get(self, session_id):
         # Get session
@@ -233,6 +242,9 @@ class TornadioHtmlFileHandler(TornadioPollingHandlerBase):
 
 
 class TornadioJSONPHandler(TornadioXHRPollingHandler):
+    # Transport name
+    name = 'jsonp'
+
     def initialize(self, server):
         self._index = None
 
@@ -295,4 +307,3 @@ class TornadioJSONPHandler(TornadioXHRPollingHandler):
         self._detach()
 
         self.finish()
-

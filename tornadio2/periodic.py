@@ -14,6 +14,9 @@ import logging
 
 
 class Callback(object):
+    """Custom implementation of the Tornado.Callback with support
+    of callback delays.
+    """
     def __init__(self, callback, callback_time, io_loop):
         self.callback = callback
         self.callback_time = callback_time

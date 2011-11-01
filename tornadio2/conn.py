@@ -45,6 +45,7 @@ class SocketConnection(object):
     dictionary on class level, where key is endpoint name and value is
     connection class:
     ::
+
         class MyConnection(SocketConnection):
             __endpoints__ = dict(clock=ClockConnection,
                                  game=GameConnection)
@@ -52,6 +53,7 @@ class SocketConnection(object):
     SocketConnection has useful event decorator. To use it, wrap method with an
     event() decorator:
     ::
+
         class MyConnection(SocketConnection):
             @event('test')
             def test(self, msg):
@@ -59,6 +61,7 @@ class SocketConnection(object):
 
     And then, when you run following client code server should print 'Hello World':
     ::
+
         sock.emit('test', {msg:'Hello World'});
     """
     __metaclass__ = EventMagicMeta
@@ -97,12 +100,14 @@ class SocketConnection(object):
 
         For example:
         ::
+
             class MyConnection(SocketConnection):
                 def on_open(self, request):
                     self.user_id = request.get_argument('id', None)
 
                     if not self.user_id:
                         return False
+
         """
         pass
 
@@ -130,6 +135,7 @@ class SocketConnection(object):
 
         For example, if you emit event like this on client-side:
         ::
+
             sock.emit('test', {msg='Hello World'})
 
         you will have following parameter values in your on_event callback:
@@ -140,6 +146,7 @@ class SocketConnection(object):
 
         However, if you emit event like this:
         ::
+
             sock.emit('test', 'a', 'b', {msg='Hello World'})
 
         you will have following parameter values:

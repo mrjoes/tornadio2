@@ -20,23 +20,23 @@ most of the features found in original Socket.IO server software.
 
 Getting Started
 ---------------
-In order to start working with the TornadIO library, you need to know some basic Tornado
+In order to start working with the TornadIO2 library, you need to know some basic Tornado
 knowledge. If you don't know how to use it, please read Tornado tutorial, which can be found
 `here <http://www.tornadoweb.org/documentation#tornado-walk-through>`_.
 
 If you're familiar with Tornado, do following to add support for Socket.IO to your application:
 
-1. Derive from tornadio.SocketConnection class and override on_message method (on_open/on_close are optional):
+1. Derive from tornadio2.SocketConnection class and override on_message method (on_open/on_close are optional):
 ::
 
-    class MyConnection(tornadio.SocketConnection):
+    class MyConnection(tornadio2.SocketConnection):
         def on_message(self, message):
            pass
 
 2. Create TornadIO2 server for your connection:
 ::
 
-    MyServer = tornadio2.router.TornadioServer(MyConnection)
+    MyServer = tornadio2.TornadioServer(MyConnection)
 
 3. Add your handler routes to the Tornado application:
 ::

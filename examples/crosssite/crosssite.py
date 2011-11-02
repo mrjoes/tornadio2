@@ -38,10 +38,10 @@ class ChatConnection(tornadio2.conn.SocketConnection):
     def on_close(self):
         self.participants.remove(self)
 
-# Create chat server
+# Create tornadio server
 ChatServer = tornadio2.router.TornadioServer(ChatConnection)
 
-# Create application
+# Create socket application
 sock_app = tornado.web.Application(
     ChatServer.urls,
     flash_policy_port = 843,
@@ -49,6 +49,7 @@ sock_app = tornado.web.Application(
     socket_io_port = 8002
 )
 
+# Create HTTP application
 http_app = tornado.web.Application(
     [(r"/", IndexHandler), (r"/socket.io.js", SocketIOHandler)]
 )
@@ -57,13 +58,13 @@ if __name__ == "__main__":
     import logging
     logging.getLogger().setLevel(logging.DEBUG)
 
-    # Create http server
+    # Create http server on port 8001
     http_server = tornado.httpserver.HTTPServer(http_app)
     http_server.listen(8001)
 
-    # Create tornadio server, but don't start it yet
+    # Create tornadio server on port 8002, but don't start it yet
     tornadio2.server.SocketServer(sock_app, auto_start=False)
 
-    # Start IOLoop
+    # Start both servers
     tornado.ioloop.IOLoop.instance().start()
 

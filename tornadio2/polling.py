@@ -12,12 +12,12 @@ import time
 import logging
 import urllib
 
-from tornado.web import RequestHandler, HTTPError, asynchronous
+from tornado.web import HTTPError, asynchronous
 
-from tornadio2 import proto
+from tornadio2 import proto, preflight
 
 
-class TornadioPollingHandlerBase(RequestHandler):
+class TornadioPollingHandlerBase(preflight.PreflightHandler):
     def initialize(self, server):
         self.server = server
         self.session = None
@@ -88,33 +88,6 @@ class TornadioPollingHandlerBase(RequestHandler):
 
     def on_connection_close(self):
         self._detach()
-
-    @asynchronous
-    def options(self, *args, **kwargs):
-        """XHR cross-domain OPTIONS handler"""
-        self.preflight()
-        self.finish()
-
-    def preflight(self):
-        """Handles request authentication"""
-        if 'Origin' in self.request.headers:
-            if self.verify_origin():
-                self.set_header('Access-Control-Allow-Origin',
-                                self.request.headers['Origin'])
-
-                if 'Cookie' in self.request.headers:
-                    self.set_header('Access-Control-Allow-Credentials', True)
-
-                return True
-            else:
-                return False
-        else:
-            return True
-
-    def verify_origin(self):
-        """Verify if request can be served"""
-        # TODO: Verify origin
-        return True
 
 
 class TornadioXHRPollingHandler(TornadioPollingHandlerBase):

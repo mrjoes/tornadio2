@@ -11,7 +11,7 @@
 from tornado import ioloop
 from tornado.web import RequestHandler, HTTPError
 
-from tornadio2 import persistent, polling, sessioncontainer, session, proto
+from tornadio2 import persistent, polling, sessioncontainer, session, proto, preflight
 
 PROTOCOLS = {
     'websocket': persistent.TornadioWebSocketHandler,
@@ -37,7 +37,7 @@ DEFAULT_SETTINGS = {
     }
 
 
-class HandshakeHandler(RequestHandler):
+class HandshakeHandler(preflight.PreflightHandler):
     def initialize(self, server):
         self.server = server
 
@@ -65,6 +65,8 @@ class HandshakeHandler(RequestHandler):
             data = 'io.j[%s](%s);' % (jsonp, proto.json_dumps(data))
         else:
             self.set_header('Content-Type', 'text/plain; charset=UTF-8')
+
+        self.preflight()
 
         self.write(data)
         self.finish()

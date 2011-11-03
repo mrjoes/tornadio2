@@ -93,7 +93,7 @@ def message(endpoint, msg, message_id=None):
         return '3:%s:%s:%s' % (
             message_id or '',
             endpoint or '',
-            msg.encode('utf-8')
+            msg.encode('utf-8') if isinstance(msg, unicode) else msg.decode('utf-8')
             )
 
 

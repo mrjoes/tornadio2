@@ -10,4 +10,5 @@
 __version__ = (0, 0, 1)
 
 from tornadio2.conn import SocketConnection
-from tornadio2.router import TornadioServer
+from tornadio2.router import TornadioRouter
+from tornadio2.server import SocketServer

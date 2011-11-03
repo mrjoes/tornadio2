@@ -72,7 +72,7 @@ class HandshakeHandler(preflight.PreflightHandler):
         self.finish()
 
 
-class TornadioServer(object):
+class TornadioRouter(object):
     def __init__(self,
                  connection,
                  user_settings=dict(),

@@ -39,7 +39,8 @@ class EventMagicMeta(type):
 
 
 class SocketConnection(object):
-    """Socket connection class.
+    """Subclass this class and define at least on_message() to make a Socket.IO
+    connection handler.
 
     To support socket.io connection multiplexing, define `_endpoints_`
     dictionary on class level, where key is endpoint name and value is

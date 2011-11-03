@@ -1,25 +1,23 @@
-Welcome to TornadIO2's documentation!
-=====================================
+=========
+TornadIO2
+=========
 
-Contents:
+This is implementation of the `Socket.IO <http://socket.io>`_ realtime
+transport library on top of the `Tornado <http://www.tornadoweb.org>`_ framework.
+
+TornadIO2 is compatible with 0.7+ version of the Socket.IO and implements
+most of the features found in original Socket.IO server software.
+
+More documentation
+------------------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
-.. automodule:: tornadio2.conn
-   :members:
+   changelog
+   overview
+   api
 
-.. automodule:: tornadio2.router
-   :members:
-
-.. automodule:: tornadio2.session
-   :members:
-
-.. automodule:: tornadio2.polling
-   :members:
-
-.. automodule:: tornadio2.persistent
-   :members:
 
 Indices and tables
 ==================

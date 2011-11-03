@@ -39,11 +39,11 @@ class ChatConnection(tornadio2.conn.SocketConnection):
         self.participants.remove(self)
 
 # Create tornadio server
-ChatServer = tornadio2.router.TornadioServer(ChatConnection)
+ChatRouter = tornadio2.router.TornadioRouter(ChatConnection)
 
 # Create socket application
 sock_app = tornado.web.Application(
-    ChatServer.urls,
+    ChatRouter.urls,
     flash_policy_port = 843,
     flash_policy_file = op.join(ROOT, 'flashpolicy.xml'),
     socket_io_port = 8002
@@ -67,4 +67,3 @@ if __name__ == "__main__":
 
     # Start both servers
     tornado.ioloop.IOLoop.instance().start()
-

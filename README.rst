@@ -34,13 +34,13 @@ If you're familiar with Tornado, do following to add support for Socket.IO to yo
 2. Create TornadIO2 server for your connection:
 ::
 
-    MyServer = tornadio2.TornadioServer(MyConnection)
+    MyRouter = tornadio2.TornadioRouter(MyConnection)
 
 3. Add your handler routes to the Tornado application:
 ::
 
   application = tornado.web.Application(
-    MyServer.urls,
+    MyRouter.urls,
     socket_io_port = 8000)
 
 4. Start your application
@@ -74,7 +74,7 @@ your main connection class:
         def on_message(self, msg):
             pass
 
-    MyServer = tornadio2.router.TornadioServer(MyRouterConnection)
+    MyRouter = tornadio2.router.TornadioRouter(MyRouterConnection)
 
 On client side, create two connections:
 ::
@@ -211,7 +211,7 @@ as first-class Tornado handlers. This saves some memory per active connection,
 because instead of having two handlers per request, you will now have only one.
 This change affected how TornadIO2 is initialized and plugged into your Tornado application:
 ::
-    ChatServer = tornadio2.router.TornadioServer(ChatConnection)
+    ChatServer = tornadio2.router.TornadioRouter(ChatConnection)
     # Fill your routes here
     routes = [(r"/", IndexHandler)]
     # Extend list of routes with Tornadio2 URLs
@@ -222,7 +222,7 @@ This change affected how TornadIO2 is initialized and plugged into your Tornado 
 or alternative approach:
 ::
 
-    ChatServer = tornadio2.router.TornadioServer(ChatConnection)
+    ChatServer = tornadio2.router.TornadioRouter(ChatConnection)
     application = tornado.web.Application(ChatServer.apply_routes([(r"/", IndexHandler)]))
 
 2. `SocketConnection.on_open` was changed to accept single `request` parameter. This parameter
@@ -248,7 +248,10 @@ is not handled, whole connection is closed (including any running multiplexed co
 In previous TornadIO version it was silently dropping currently open transport connection
 and expecting for socket.io to reconnect.
 
-4. Socket.IO 0.7 dropped support for xhr-multipart transport, so you can safely remove it
+4. Persistent connections are not dropped immediately - there's a chance that person
+might reconnect with same session id and we will want to pick it up.
+
+5. Socket.IO 0.7 dropped support for xhr-multipart transport, so you can safely remove it
 from your configuration file.
 
 Bugs and Workarounds
@@ -261,12 +264,14 @@ Connect after disconnect
 
 Unfortunately, disconnection is bugged in socket.io. If you close socket connection,
 `io.connect` to the same endpoint will silently fail. If you try to forcibly connect
-associated socket, you will end up having your callbacks called twice, etc.
+associated socket, it will work, but you have to make sure that you're not setting up
+callbacks again, as you will end up having your callbacks called twice.
 
 For now, if your main connection was closed, you have two options:
 ::
 
     var conn = io.connect(addr, {'force new connection': true});
+    conn.on('message', function(msg) { alert('msg') });
 
 or alternative approach:
 ::
@@ -274,11 +279,21 @@ or alternative approach:
     io.j = [];
     io.sockets = [];
 
+    var conn = io.connect(addr);
+    conn.on('message', function(msg) { alert('msg') });
+
+or separate reconnection from initial connection:
+::
+    var conn = io.connect(addr);
+    conn.on('disconnect', function(msg) { conn.socket.reconnect(); });
+
 If you use first approach, you will lose multiplexing for good.
 
 If you use second approach, apart of it being quite hackish, it will clean up existing
 sockets, so socket.io will have to create new one and will use it to connect to endpoints.
 Also, instead of clearing `io.sockets`, you can remove socket which matches your URL.
+
+If you use third approach, make sure you're not setting up events again.
 
 On a side note, if you can avoid using `disconnect()` for socket, do so.
 

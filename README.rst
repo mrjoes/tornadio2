@@ -55,7 +55,7 @@ TornadIO2 supports this transparently, but you have to tell TornadIO how to rout
 multiplexed connection requests. To accomplish this, you can either use built-in
 routing mechanism or implement your own.
 
-To use built-in routing, declare and initialize `__endpoints__` dictionary in
+To use built-in routing, declare and initialize ``__endpoints__`` dictionary in
 your main connection class:
 ::
 
@@ -165,7 +165,7 @@ To handle event on client side, use following code:
 However, take care - if method signature does not match (missing parameters, extra
 parameters, etc), your connection will blow up and self destruct.
 
-If you don't like this event handling approach, just override `on_event` in your
+If you don't like this event handling approach, just override ``on_event`` in your
 socket connection class and handle them by yourself:
 ::
 
@@ -185,10 +185,10 @@ If you send data from client using following code:
     sock.emit('test', {a: 10, b: 10});
 
 
-TornadIO2 will unpack dictionary into `kwargs` parameters and pass it to the
-`on_event` handler. However, if you pass more than one parameter, Tornadio2 won't
-unpack them into `kwargs` and will just pass parameters as `args`. For example, this
-code will lead to `args` being passed to `on_event` handler:
+TornadIO2 will unpack dictionary into ``kwargs`` parameters and pass it to the
+``on_event`` handler. However, if you pass more than one parameter, Tornadio2 won't
+unpack them into ``kwargs`` and will just pass parameters as ``args``. For example, this
+code will lead to ``args`` being passed to ``on_event`` handler:
 ::
 
     sock.emit('test', 1, 2, 3, {a: 10, b: 10});
@@ -252,9 +252,9 @@ or alternative approach:
     ChatServer = tornadio2.router.TornadioRouter(ChatConnection)
     application = tornado.web.Application(ChatServer.apply_routes([(r"/", IndexHandler)]))
 
-2. `SocketConnection.on_open` was changed to accept single `request` parameter. This parameter
+2. `SocketConnection.on_open` was changed to accept single ``request`` parameter. This parameter
 is instance of the ConnectionInfo class which contains some helper methods like
-get_argument(), get_cookie(), etc. Also, if you return `False` from your `on_open` handler,
+get_argument(), get_cookie(), etc. Also, if you return ``False`` from your ``on_open`` handler,
 TornadIO2 will reject connection.
 
 Example:
@@ -284,15 +284,18 @@ from your configuration file.
 Bugs and Workarounds
 --------------------
 
-There are some known bugs in socket.io (valid for socket.io-client 0.8.6)
+There are some known bugs in socket.io (valid for socket.io-client 0.8.6). I consider
+them "show-stoppers", but you can work around them with some degree of luck.
 
 Connect after disconnect
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 Unfortunately, disconnection is bugged in socket.io. If you close socket connection,
-`io.connect` to the same endpoint will silently fail. If you try to forcibly connect
+``io.connect()`` to the same endpoint will silently fail. If you try to forcibly connect
 associated socket, it will work, but you have to make sure that you're not setting up
 callbacks again, as you will end up having your callbacks called twice.
+
+Link: https://github.com/LearnBoost/socket.io-client/issues/251
 
 For now, if your main connection was closed, you have two options:
 ::
@@ -318,11 +321,23 @@ If you use first approach, you will lose multiplexing for good.
 
 If you use second approach, apart of it being quite hackish, it will clean up existing
 sockets, so socket.io will have to create new one and will use it to connect to endpoints.
-Also, instead of clearing `io.sockets`, you can remove socket which matches your URL.
+Also, instead of clearing ``io.sockets``, you can remove socket which matches your URL.
 
 If you use third approach, make sure you're not setting up events again.
 
-On a side note, if you can avoid using `disconnect()` for socket, do so.
+On a side note, if you can avoid using ``disconnect()`` for socket, do so.
+
+Query string parameters
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Current implementation of socket.io client (still valid as of 0.8.5) stores query string
+parameters on session level. So, if you have multiplexed connections and want to pass
+parameters to them - it is not possible.
+
+See related bug report: https://github.com/LearnBoost/socket.io-client/issues/331
+
+So, you can not expect query string parametes to be passed to your virtual connections and
+will have to structure your JS code, so first ``io.connect()`` will
 
 Examples
 --------

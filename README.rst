@@ -113,6 +113,17 @@ callback function when sending a message:
             print 'Got ack for my message: %s' % message
 
 
+To send event with acknowledgement, use ``SocketConnection.emit_ack`` method:
+::
+
+    class MyConnection(SocketConnection):
+        def on_message(self, msg):
+            self.emit(self.my_callback, 'hello')
+
+        def my_callback(self, event):
+            print 'Got ack for my message: %s' % message
+
+
 Events
 ------
 
@@ -129,11 +140,27 @@ to your python code. Check following example:
             print 'Hello %s' % name
 
             self.emit('thanks', name=name)
+            self.emit('hello', name, 'foobar')
 
 In your client code, to call this event, do something like:
 ::
 
     sock.emit('hello', {name: 'Joes'});
+
+You can also use positional parameters. For previous example, you can also do something like:
+::
+
+    sock.emit('hello', 'Joes')
+
+To handle event on client side, use following code:
+::
+
+    sock.on('thanks', function(data) {
+        alert(data.name);
+    });
+    sock.on('hello', function(name, dummy) {
+        alert('Hey ' + name + ' ' + dummy);
+    });
 
 However, take care - if method signature does not match (missing parameters, extra
 parameters, etc), your connection will blow up and self destruct.

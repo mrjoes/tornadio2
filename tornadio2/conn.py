@@ -200,25 +200,32 @@ class SocketConnection(object):
 
         self.session.send_message(msg)
 
-    def emit(self, name, callback=None, **kwargs):
+    def emit(self, name, *args, **kwargs):
         """Send socket.io event.
 
         `name`
             Name of the event
-        `callback`
-            Optional callback. If passed, callback will be called
-            when client received event and sent acknowledgment back.
         `kwargs`
             Optional event parameters
         """
-        if callback is not None:
-            msg = proto.event(self.endpoint,
-                              name,
-                              self.queue_ack(callback, (name, kwargs)),
-                              **kwargs)
-        else:
-            msg = proto.event(self.endpoint, name, **kwargs)
+        msg = proto.event(self.endpoint, name, None, *args, **kwargs)
+        self.session.send_message(msg)
 
+    def emit_ack(self, callback, name, *args, **kwargs):
+        """Send socket.io event with acknowledgment.
+
+        `callback`
+            Acknowledgment callback
+        `name`
+            Name of the event
+        `kwargs`
+            Optional event parameters
+        """
+        msg = proto.event(self.endpoint,
+                          name,
+                          self.queue_ack(callback, (name, args, kwargs)),
+                          *args,
+                          **kwargs)
         self.session.send_message(msg)
 
     def close(self):

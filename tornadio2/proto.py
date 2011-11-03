@@ -8,6 +8,8 @@
     :copyright: (c) 2011 by the Serge S. Koval, see AUTHORS for more details.
     :license: Apache, see LICENSE for more details.
 """
+import logging
+
 try:
     import simplejson as json
     json_decimal_args = {"use_decimal": True}
@@ -95,7 +97,7 @@ def message(endpoint, msg, message_id=None):
             )
 
 
-def event(endpoint, name, message_id=None, **kwargs):
+def event(endpoint, name, message_id, *args, **kwargs):
     """Generate event message.
 
     `endpoint`
@@ -104,13 +106,24 @@ def event(endpoint, name, message_id=None, **kwargs):
         Event name
     `message_id`
         Optional message id for ACK
-    `kwargs`
+    `args`
         Optional event arguments.
+    `kwargs`
+        Optional event arguments. Will be encoded as dictionary.
     """
-    evt = dict(
-        name=name,
-        args=[kwargs]
-    )
+    if args:
+        evt = dict(
+            name=name,
+            args=args
+            )
+
+        if kwargs:
+            logging.error('Can not generate event() with args and kwargs.')
+    else:
+        evt = dict(
+            name=name,
+            args=[kwargs]
+        )
 
     return '5:%s:%s:%s' % (
         message_id or '',

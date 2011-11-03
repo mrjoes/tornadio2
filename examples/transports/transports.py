@@ -37,7 +37,7 @@ class ChatConnection(tornadio2.conn.SocketConnection):
         self.participants.remove(self)
 
 # Create chat server
-ChatRouter = tornadio2.router.TornadioServer(ChatConnection)
+ChatRouter = tornadio2.router.TornadioRouter(ChatConnection)
 
 # Create application
 application = tornado.web.Application(

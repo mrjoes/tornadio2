@@ -187,7 +187,7 @@ def test_event():
     server, session, transport, conn = _get_test_environment()
 
     # Send event
-    transport.recv(proto.event(None, 'test', a=10, b=20))
+    transport.recv(proto.event(None, None, 'test', a=10, b=20))
 
     # Send event with multiple parameters
     transport.recv('5:::{"name":"test", "args":[10, 20]}')

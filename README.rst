@@ -337,7 +337,8 @@ parameters to them - it is not possible.
 See related bug report: https://github.com/LearnBoost/socket.io-client/issues/331
 
 So, you can not expect query string parametes to be passed to your virtual connections and
-will have to structure your JS code, so first ``io.connect()`` will
+will have to structure your JS code, so first ``io.connect()`` will include anything you
+want to pass to the server.
 
 Examples
 --------

@@ -21,6 +21,7 @@ class TornadioWebSocketHandler(WebSocketHandler):
     """Websocket protocol handler"""
     def initialize(self, server):
         self.server = server
+	self.session = None
 
         logging.debug('Initializing %s handler.' % self.name)
 

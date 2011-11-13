@@ -221,9 +221,9 @@ Lets check following example:
             self.send(response.body)
 
 If client will quickly send two messages, it will work "synchronously" - ``on_message`` won't be called for second message
-till handling of first message finished.
+till handling of first message is finished.
 
-However, if you will change decorator to ``gen.engine``, message handling will be asynchronous as well and will be out of order:
+However, if you will change decorator to ``gen.engine``, message handling will be asynchronous and might be out of order:
 ::
 
     from tornadio2 import gen
@@ -235,13 +235,14 @@ However, if you will change decorator to ``gen.engine``, message handling will b
             response = yield gen.Task(http_client.fetch, 'http://google.com?q=' + query)
             self.send(response.body)
 
-If client will quickly send two messages, server will send response as soon as response is ready.
+If client will quickly send two messages, server will send response as soon as response is ready and if it takes longer to
+handle first message, response for second message will be sent first.
 
-As a nice feature, you can also decorate your event handlers or even wrap ``on_event`` handler, so
+As a nice feature, you can also decorate your event handlers or even wrap main ``on_event`` method, so
 all events can be synchronous when using asynchronous calls.
 
-Obviously, decorators only work with the ``yield`` based methods. If you implement your asynchronous
-code using explicit callbacks, it is up for you how to synchronize order of the execution.
+``tornadio2.gen`` API will only work with the ``yield`` based methods (methods that produce generators). If you implement your
+asynchronous code using explicit callbacks, it is up for you how to synchronize order of the execution for them.
 
 TBD: performance considerations, python iterator performance.
 

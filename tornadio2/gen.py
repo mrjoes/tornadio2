@@ -18,6 +18,8 @@ from tornado.gen import engine, Runner, Task, Wait, WaitAll, Callback
 
 
 class SyncRunner(Runner):
+    """Overloaded ``tornado.gen.Runner`` with callback upon run completion
+    """
     def __init__(self, gen, callback):
         self._callback = callback
 
@@ -34,37 +36,57 @@ class SyncRunner(Runner):
                 self._callback()
 
 
+class CallQueue(object):
+    __slots__ = ('runner', 'queue')
+
+    def __init__(self):
+        self.runner = None
+        self.queue = deque()
+
+
 def sync_engine(func):
     """Queued version of the ``gen.engine``.
 
     Prevents calling of the wrapped function if it was not completed before.
     Basically, function will be called synchronously without blocking io_loop.
+
+    This decorator can only be used on class methods, as it requires ``self``
+    to make sure that calls are scheduled on instance level (connection) instead
+    of class level (method).
     """
-    def finished():
-        data[0] = None
-
-        try:
-            args, kwargs = data[1].popleft()
-
-            gen = func(*args, **kwargs)
-            if isinstance(gen, types.GeneratorType):
-                data[0] = SyncRunner(gen, finished)
-                data[0].run()
-        except IndexError:
-            pass
-
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        if data[0] is not None:
-            data[1].append((args, kwargs))
-        else:
-            gen = func(*args, **kwargs)
+    def wrapper(self, *args, **kwargs):
+        # Run method
+        def run(args, kwargs):
+            gen = func(self, *args, **kwargs)
             if isinstance(gen, types.GeneratorType):
-                data[0] = SyncRunner(gen, finished)
-                data[0].run()
+                data.runner = SyncRunner(gen, finished)
+                data.runner.run()
 
-    # TODO: use namedtuple in the future
-    # 0 = current engine
-    # 1 = call queue
-    data = [None, deque()]
+        # Completion callback
+        def finished():
+            data.runner = None
+
+            try:
+                args, kwargs = data.queue.popleft()
+                run(args, kwargs)
+            except IndexError:
+                pass
+
+        # Get call queue for this instance and wrapped method
+        queue = getattr(self, '_call_queue', None)
+        if queue is None:
+            queue = self._call_queue = dict()
+
+        data = queue.get(func, None)
+        if data is None:
+            queue[func] = data = CallQueue()
+
+        # If there's something running, queue call
+        if data.runner is not None:
+            data.queue.append((args, kwargs))
+        else:
+            # Otherwise run it
+            run(args, kwargs)
+
     return wrapper

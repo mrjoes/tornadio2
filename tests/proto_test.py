@@ -39,6 +39,8 @@ def test_message():
     eq_(proto.message(None, u'\u0403\u0404\u0405'),
                       u'3:::\u0403\u0404\u0405'.encode('utf-8'))
 
+    # TODO: Multibyte encoding fix
+
     # TODO: Fix me
     eq_(proto.message(None, dict(a=1, b=2)),
                       '4:::%s' % proto.json_dumps(dict(a=1, b=2)))

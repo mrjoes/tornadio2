@@ -187,7 +187,7 @@ def test_event():
     server, session, transport, conn = _get_test_environment()
 
     # Send event
-    transport.recv(proto.event(None, None, 'test', a=10, b=20))
+    transport.recv(proto.event(None, 'test', None, a=10, b=20))
 
     # Send event with multiple parameters
     transport.recv('5:::{"name":"test", "args":[10, 20]}')
@@ -196,7 +196,7 @@ def test_event():
     eq_(conn.pop_event(), ('test', dict(a=10, b=20)))
 
     # Check outgoing
-    eq_(transport.pop_outgoing(), proto.event(None, 'test', a=10, b=20))
+    eq_(transport.pop_outgoing(), proto.event(None, 'test', None, a=10, b=20))
 
 
 @raises(TypeError)
@@ -205,13 +205,13 @@ def test_failed_event():
     server, session, transport, conn = _get_test_environment(EventConnection)
 
     # Send event
-    transport.recv(proto.event(None, 'test', a=10, b=20))
+    transport.recv(proto.event(None, 'test', None, a=10, b=20))
 
     # Check response
-    eq_(transport.pop_outgoing(), proto.event(None, 'test', a=10, b=20))
+    eq_(transport.pop_outgoing(), proto.event(None, 'test', None, a=10, b=20))
 
     # Throw invalid event
-    transport.recv(proto.event(None, 'test', a=10))
+    transport.recv(proto.event(None, 'test', None, a=10))
 
 
 @raises(JSONDecodeError)

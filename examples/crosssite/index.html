@@ -20,8 +20,8 @@
 
         //send the message when submit is clicked
         $('#chatform').submit(function (evt) {
-            var line = $('#chatform [type=text]').val()
-            $('#chatform [type=text]').val('')
+            var line = $('#chatform [type=text]').val();
+            $('#chatform [type=text]').val('');
             s.send(line);
             return false;
         });

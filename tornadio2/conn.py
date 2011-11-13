@@ -9,7 +9,7 @@
 import time
 import logging
 
-from tornadio2 import proto
+from tornadio2 import proto, gen
 
 
 def event(name):
@@ -24,6 +24,7 @@ def event(name):
 class EventMagicMeta(type):
     """Event handler metaclass"""
     def __init__(cls, name, bases, attrs):
+        # Manage events
         events = {}
 
         for a in attrs:
@@ -35,6 +36,7 @@ class EventMagicMeta(type):
 
         setattr(cls, '_events', events)
 
+        # Call base
         super(EventMagicMeta, cls).__init__(name, bases, attrs)
 
 
@@ -85,6 +87,8 @@ class SocketConnection(object):
 
         self.ack_id = 1
         self.ack_queue = dict()
+
+        self._event_worker = None
 
     # Public API
     def on_open(self, request):
@@ -161,9 +165,9 @@ class SocketConnection(object):
         if handler:
             try:
                 if args:
-                    handler(self, *args)
+                    return handler(self, *args)
                 else:
-                    handler(self, **kwargs)
+                    return handler(self, **kwargs)
             except TypeError:
                 if args:
                     logging.error(('Attempted to call event handler %s ' +

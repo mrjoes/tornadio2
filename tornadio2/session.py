@@ -12,8 +12,6 @@ class ConnectionInfo(object):
         self.cookies = cookies
         self.arguments = arguments
 
-        print arguments
-
     def get_argument(self, name):
         val = self.arguments.get(name)
         if val:

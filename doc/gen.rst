@@ -26,10 +26,9 @@ Lets check following example:
             self.send(response.body)
 
 If client will quickly send two messages, it will work "synchronously" - ``on_message`` won't be called for second message
-till handling of first message is finished, but it won't block ``io_loop``.
+till handling of first message is finished.
 
-However, if you will change decorator to ``gen.engine``, message handling will be asynchronous and might be out of order:
-::
+However, if you will change decorator to ``gen.engine``, message handling will be asynchronous and might be out of order::
 
     from tornadio2 import gen
 
@@ -47,6 +46,6 @@ As a nice feature, you can also decorate your event handlers or even wrap main `
 all events can be synchronous when using asynchronous calls.
 
 ``tornadio2.gen`` API will only work with the ``yield`` based methods (methods that produce generators). If you implement your
-asynchronous code using explicit callbacks, it is up for you how to synchronize order of the execution for them.
+asynchronous code using explicit callbacks, it is up for you how to synchronize their execution order.
 
 TBD: performance considerations, python iterator performance.

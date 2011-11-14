@@ -20,6 +20,7 @@ Topics
    events
    acknowledgments
    gen
+   deployment
    bugs
    api
 

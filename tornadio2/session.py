@@ -48,8 +48,6 @@ class ConnectionInfo(object):
         self.cookies = cookies
         self.arguments = arguments
 
-        print arguments
-
     def get_argument(self, name):
         """Return single argument by name"""
         val = self.arguments.get(name)

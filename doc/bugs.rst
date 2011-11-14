@@ -7,14 +7,14 @@ them "show-stoppers", but you can work around them with some degree of luck.
 Connect after disconnect
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Unfortunately, disconnection is bugged in socket.io. If you close socket connection,
+Unfortunately, disconnection is bugged in socket.io client. If you close socket connection,
 ``io.connect()`` to the same endpoint will silently fail. If you try to forcibly connect
 associated socket, it will work, but you have to make sure that you're not setting up
 callbacks again, as you will end up having your callbacks called twice.
 
 Link: https://github.com/LearnBoost/socket.io-client/issues/251
 
-For now, if your main connection was closed, you have two options:
+For now, if your main connection was closed, you have few options:
 ::
 
     var conn = io.connect(addr, {'force new connection': true});

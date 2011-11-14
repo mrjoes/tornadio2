@@ -19,7 +19,7 @@ To send event with acknowledgement, use ``SocketConnection.emit_ack`` method:
 
     class MyConnection(SocketConnection):
         def on_message(self, msg):
-            self.emit(self.my_callback, 'hello')
+            self.emit_ack(self.my_callback, 'hello')
 
         def my_callback(self, event):
             print 'Got ack for my message: %s' % message

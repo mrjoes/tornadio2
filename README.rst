@@ -66,7 +66,7 @@ then manually start IOLoop.
 More information
 ----------------
 
-For more information, check TornadIO2 documentation and sample applications.
+For more information, check `TornadIO2 documentation <http://readthedocs.org/docs/tornadio2/en/latest/>`_ and sample applications.
 
 
 Examples

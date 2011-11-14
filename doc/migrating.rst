@@ -6,8 +6,8 @@ TornadIO2 has some incompatible API changes.
 1. Instead of having one rule and a router handler, TornadIO2 exposes transports
 as first-class Tornado handlers. This saves some memory per active connection,
 because instead of having two handlers per request, you will now have only one.
-This change affected how TornadIO2 is initialized and plugged into your Tornado application:
-::
+This change affected how TornadIO2 is initialized and plugged into your Tornado application::
+
     ChatServer = tornadio2.router.TornadioRouter(ChatConnection)
     # Fill your routes here
     routes = [(r"/", IndexHandler)]
@@ -16,8 +16,7 @@ This change affected how TornadIO2 is initialized and plugged into your Tornado 
 
     application = tornado.web.Application(routes)
 
-or alternative approach:
-::
+or alternative approach::
 
     ChatServer = tornadio2.router.TornadioRouter(ChatConnection)
     application = tornado.web.Application(ChatServer.apply_routes([(r"/", IndexHandler)]))
@@ -27,8 +26,7 @@ is instance of the ConnectionInfo class which contains some helper methods like
 get_argument(), get_cookie(), etc. Also, if you return ``False`` from your ``on_open`` handler,
 TornadIO2 will reject connection.
 
-Example:
-::
+Example::
 
     class MyConnection(SocketConnection):
         def on_open(self, request):

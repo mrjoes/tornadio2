@@ -1,19 +1,33 @@
 # -*- coding: utf-8 -*-
+#
+# Copyright: (c) 2011 by the Serge S. Koval, see AUTHORS for more details.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
 """
     tornadio2.conn
     ~~~~~~~~~~~~~~
 
-    :copyright: (c) 2011 by the Serge S. Koval, see AUTHORS for more details.
-    :license: Apache, see LICENSE for more details.
+    Tornadio connection implementation.
 """
 import time
 import logging
 
-from tornadio2 import proto, gen
+from tornadio2 import proto
 
 
 def event(name):
-    """Event handler decorator"""
+    """Event handler decorator."""
     def handler(f):
         f._event_name = name
         return f
@@ -41,31 +55,29 @@ class EventMagicMeta(type):
 
 
 class SocketConnection(object):
-    """Subclass this class and define at least on_message() to make a Socket.IO
+    """Subclass this class and define at least `on_message()` method to make a Socket.IO
     connection handler.
 
     To support socket.io connection multiplexing, define `_endpoints_`
     dictionary on class level, where key is endpoint name and value is
-    connection class:
-    ::
+    connection class::
 
         class MyConnection(SocketConnection):
             __endpoints__ = dict(clock=ClockConnection,
                                  game=GameConnection)
 
     SocketConnection has useful event decorator. To use it, wrap method with an
-    event() decorator:
-    ::
+    event() decorator::
 
         class MyConnection(SocketConnection):
             @event('test')
             def test(self, msg):
                 print msg
 
-    And then, when you run following client code server should print 'Hello World':
-    ::
+    And then, when you run following client code server should print 'Hello World'::
 
         sock.emit('test', {msg:'Hello World'});
+
     """
     __metaclass__ = EventMagicMeta
 
@@ -103,8 +115,7 @@ class SocketConnection(object):
             Tornado request handler object which you can use to read cookie,
             remote IP address, etc.
 
-        For example:
-        ::
+        For example::
 
             class MyConnection(SocketConnection):
                 def on_open(self, request):
@@ -138,27 +149,26 @@ class SocketConnection(object):
         then you will receive parameters in dict in `kwargs`. In all other
         cases you will have `args` list.
 
-        For example, if you emit event like this on client-side:
-        ::
+        For example, if you emit event like this on client-side::
 
             sock.emit('test', {msg='Hello World'})
 
-        you will have following parameter values in your on_event callback:
+        you will have following parameter values in your on_event callback::
 
             name = 'test'
             args = []
             kwargs = {msg: 'Hello World'}
 
-        However, if you emit event like this:
-        ::
+        However, if you emit event like this::
 
             sock.emit('test', 'a', 'b', {msg='Hello World'})
 
-        you will have following parameter values:
+        you will have following parameter values::
 
             name = 'test'
             args = ['a', 'b', {msg: 'Hello World'}]
             kwargs = {}
+
         """
         handler = self._events.get(name)
 
@@ -195,6 +205,9 @@ class SocketConnection(object):
             when client received sent message and sent acknowledgment
             back.
         """
+        if self.is_closed:
+            return
+
         if callback is not None:
             msg = proto.message(self.endpoint,
                                 message,
@@ -212,6 +225,9 @@ class SocketConnection(object):
         `kwargs`
             Optional event parameters
         """
+        if self.is_closed:
+            return
+
         msg = proto.event(self.endpoint, name, None, *args, **kwargs)
         self.session.send_message(msg)
 
@@ -225,6 +241,9 @@ class SocketConnection(object):
         `kwargs`
             Optional event parameters
         """
+        if self.is_closed:
+            return
+
         msg = proto.event(self.endpoint,
                           name,
                           self.queue_ack(callback, (name, args, kwargs)),
@@ -236,7 +255,7 @@ class SocketConnection(object):
         """Forcibly close client connection"""
         self.session.close(self.endpoint)
 
-        # TODO: Notify unconfirmed messages?
+        # TODO: Notify about unconfirmed messages?
 
     # ACKS
     def queue_ack(self, callback, message):

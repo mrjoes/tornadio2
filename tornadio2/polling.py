@@ -1,12 +1,24 @@
 # -*- coding: utf-8 -*-
+#
+# Copyright: (c) 2011 by the Serge S. Koval, see AUTHORS for more details.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
 """
     tornadio2.polling
     ~~~~~~~~~~~~~~~~~
 
     This module implements socket.io polling transports.
-
-    :copyright: (c) 2011 by the Serge S. Koval, see AUTHORS for more details.
-    :license: Apache, see LICENSE for more details.
 """
 import time
 import logging
@@ -18,6 +30,7 @@ from tornadio2 import proto, preflight
 
 
 class TornadioPollingHandlerBase(preflight.PreflightHandler):
+    """Polling handler base"""
     def initialize(self, server):
         self.server = server
         self.session = None
@@ -25,6 +38,8 @@ class TornadioPollingHandlerBase(preflight.PreflightHandler):
         logging.debug('Initializing %s transport.' % self.name)
 
     def _get_session(self, session_id):
+        """Get session if exists and checks if session is closed.
+        """
         # Get session
         session = self.server.get_session(session_id)
 
@@ -39,6 +54,7 @@ class TornadioPollingHandlerBase(preflight.PreflightHandler):
         return session
 
     def _detach(self):
+        """Detach from the session"""
         if self.session:
             self.session.stop_heartbeat()
             self.session.remove_handler(self)
@@ -52,6 +68,8 @@ class TornadioPollingHandlerBase(preflight.PreflightHandler):
 
     @asynchronous
     def post(self, session_id):
+        """Handle incoming POST request"""
+
         # Get session
         self.session = self._get_session(session_id)
 
@@ -75,7 +93,6 @@ class TornadioPollingHandlerBase(preflight.PreflightHandler):
                 self.session.close()
 
         self.set_header('Content-Type', 'text/plain; charset=UTF-8')
-        #self.write('')
         self.finish()
 
     def send_messages(self, messages):
@@ -83,14 +100,17 @@ class TornadioPollingHandlerBase(preflight.PreflightHandler):
         raise NotImplementedError()
 
     def session_closed(self):
-        """Close associated connection"""
+        """Called by the session when it was closed"""
         self._detach()
 
     def on_connection_close(self):
+        """Called by Tornado, when connection was closed"""
         self._detach()
 
 
 class TornadioXHRPollingHandler(TornadioPollingHandlerBase):
+    """xhr-polling transport implementation"""
+
     # Transport name
     name = 'xhr-polling'
 
@@ -98,6 +118,8 @@ class TornadioXHRPollingHandler(TornadioPollingHandlerBase):
         super(TornadioXHRPollingHandler, self).initialize(server)
 
         self._timeout = None
+
+        # TODO: Move me out, there's no need to read timeout for POST requests
         self._timeout_interval = self.server.settings['xhr_polling_timeout']
 
     @asynchronous
@@ -169,9 +191,6 @@ class TornadioHtmlFileHandler(TornadioPollingHandlerBase):
     """IE HtmlFile protocol implementation.
 
     Uses hidden frame to stream data from the server in one connection.
-
-    Unfortunately, it is unknown if this transport works, as socket.io
-    client-side fails in IE7/8.
     """
     # Transport name
     name = 'htmlfile'

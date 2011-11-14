@@ -1,3 +1,26 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright: (c) 2011 by the Serge S. Koval, see AUTHORS for more details.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+"""
+    tornadio2.session
+    ~~~~~~~~~~~~~~~~~
+
+    Active TornadIO2 connection session.
+"""
+
 import urlparse
 import logging
 
@@ -7,6 +30,19 @@ from tornadio2 import sessioncontainer, proto, periodic
 
 
 class ConnectionInfo(object):
+    """Connection information object.
+
+    Will be passed to the ``on_open`` handler of your connection class.
+
+    Has few properties:
+
+    `ip`
+        Caller IP address
+    `cookies`
+        Collection of cookies
+    `arguments`
+        Collection of the query string arguments
+    """
     def __init__(self, ip, arguments, cookies):
         self.ip = ip
         self.cookies = cookies
@@ -15,12 +51,14 @@ class ConnectionInfo(object):
         print arguments
 
     def get_argument(self, name):
+        """Return single argument by name"""
         val = self.arguments.get(name)
         if val:
             return val[0]
         return None
 
     def get_cookie(self, name):
+        """Return single cookie by its name"""
         return self.cookies.get(name)
 
 
@@ -28,6 +66,7 @@ class Session(sessioncontainer.SessionBase):
     """Socket.IO session implementation.
 
     Session has some publicly accessible properties:
+
     `server`
         Server association. Server contains io_loop instance, settings, etc.
     `remote_ip`
@@ -81,7 +120,12 @@ class Session(sessioncontainer.SessionBase):
 
     # Session callbacks
     def on_delete(self, forced):
-        """Session expiration callback"""
+        """Session expiration callback
+
+        `forced`
+            If session item explicitly deleted, forced will be set to True. If
+            item expired, will be set to False.
+        """
         # Do not remove connection if it was not forced and there's running connection
         if not forced and self.handler is not None and not self.is_closed:
             self.promote()
@@ -90,7 +134,11 @@ class Session(sessioncontainer.SessionBase):
 
     # Add session
     def set_handler(self, handler):
-        """Set active handler for the session"""
+        """Set active handler for the session
+
+        `handler`
+            Associate active Tornado handler with the session
+        """
         # Check if session already has associated handler
         if self.handler is not None:
             return False
@@ -111,7 +159,11 @@ class Session(sessioncontainer.SessionBase):
         return True
 
     def remove_handler(self, handler):
-        """Remove active handler from the session"""
+        """Remove active handler from the session
+
+        `handler`
+            Handler to remove
+        """
         # Attempt to remove another handler
         if self.handler != handler:
             raise Exception('Attempted to remove invalid handler')
@@ -120,11 +172,15 @@ class Session(sessioncontainer.SessionBase):
         self.promote()
 
     def send_message(self, pack):
-        """Send socket.io encoded message"""
+        """Send socket.io encoded message
+
+        `pack`
+            Encoded socket.io message
+        """
         logging.debug('<<< ' + pack)
 
         # TODO: Possible optimization if there's on-going connection - there's no
-        # need to queue messages
+        # need to queue messages?
 
         self.send_queue.append(pack)
         self.flush()
@@ -191,13 +247,13 @@ class Session(sessioncontainer.SessionBase):
         self._heartbeat_timer.start()
 
     def stop_heartbeat(self):
-        """Stop heartbeat"""
+        """Stop active heartbeat"""
         if self._heartbeat_timer is not None:
             self._heartbeat_timer.stop()
             self._heartbeat_timer = None
 
     def delay_heartbeat(self):
-        """Delay heartbeat"""
+        """Delay active heartbeat"""
         if self._heartbeat_timer is not None:
             self._heartbeat_timer.delay()
 
@@ -271,7 +327,7 @@ class Session(sessioncontainer.SessionBase):
         """Socket.IO message handler.
 
         `msg`
-            Raw socket.io message to process.
+            Raw socket.io message to handle
         """
         try:
             logging.debug('>>> ' + msg)

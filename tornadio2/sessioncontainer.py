@@ -1,13 +1,25 @@
 # -*- coding: utf-8 -*-
+#
+# Copyright: (c) 2011 by the Serge S. Koval, see AUTHORS for more details.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
 """
     tornadio2.sessioncontainer
     ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     Simple heapq-based session implementation with sliding expiration window
     support.
-
-    :copyright: (c) 2011 by the Serge S. Koval, see AUTHORS for more details.
-    :license: Apache, see LICENSE for more details.
 """
 
 from heapq import heappush, heappop
@@ -29,6 +41,14 @@ class SessionBase(object):
     """
 
     def __init__(self, session_id=None, expiry=None):
+        """Constructor.
+
+        ``session_id``
+            Optional session id. If not provided, will generate
+            new session id.
+        ``expiry``
+            Expiration time. If not provided, will never expire.
+        """
         self.session_id = session_id or _random_key()
         self.promoted = None
         self.expiry = expiry
@@ -37,6 +57,7 @@ class SessionBase(object):
             self.expiry_date = time() + self.expiry
 
     def is_alive(self):
+        """Check if session is still alive"""
         return self.expiry_date > time()
 
     def promote(self):
@@ -65,18 +86,30 @@ class SessionContainer(object):
         self._queue = []
 
     def add(self, session):
-        # Add session to the container
+        """Add session to the container.
+
+        `session`
+            Session object
+        """
         self._items[session.session_id] = session
 
         if session.expiry is not None:
             heappush(self._queue, session)
 
     def get(self, session_id):
-        """Return session object or None if it is not available"""
+        """Return session object or None if it is not available
+
+        `session_id`
+            Session identifier
+        """
         return self._items.get(session_id, None)
 
     def remove(self, session_id):
-        """Remove session object from the container"""
+        """Remove session object from the container
+
+        `session_id`
+            Session identifier
+        """
         session = self._items.get(session_id, None)
 
         if session is not None:
@@ -88,7 +121,11 @@ class SessionContainer(object):
         return False
 
     def expire(self, current_time=None):
-        """Expire any old entries"""
+        """Expire any old entries
+
+        `current_time`
+            Optional time to be used to clean up queue (can be used in unit tests)
+        """
         if not self._queue:
             return
 

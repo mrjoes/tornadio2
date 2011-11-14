@@ -1,12 +1,23 @@
 # -*- coding: utf-8 -*-
+#
+# Copyright: (c) 2011 by the Serge S. Koval, see AUTHORS for more details.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
 """
     tornadio2.gen
     ~~~~~~~~~~~~~
 
     Generator-based interface to maek it easier to work in an asynchronous environment.
-
-    :copyright: (c) 2011 by the Serge S. Koval, see AUTHORS for more details.
-    :license: Apache, see LICENSE for more details.
 """
 
 import functools
@@ -18,14 +29,23 @@ from tornado.gen import engine, Runner, Task, Wait, WaitAll, Callback
 
 
 class SyncRunner(Runner):
-    """Overloaded ``tornado.gen.Runner`` with callback upon run completion
+    """Customized ``tornado.gen.Runner``, which will notify callback about
+    completion of the generator.
     """
     def __init__(self, gen, callback):
+        """Constructor.
+
+        `gen`
+            Generator
+        `callback`
+            Function that should be called upon generator completion
+        """
         self._callback = callback
 
         super(SyncRunner, self).__init__(gen)
 
     def run(self):
+        """Overloaded run function"""
         if self.running or self.finished:
             return
 
@@ -45,10 +65,11 @@ class CallQueue(object):
 
 
 def sync_engine(func):
-    """Queued version of the ``gen.engine``.
+    """Queued version of the ``tornado.gen.engine``.
 
-    Prevents calling of the wrapped function if it was not completed before.
-    Basically, function will be called synchronously without blocking io_loop.
+    Prevents calling of the wrapped function if there is already one instance of
+    the function running asynchronously. Function will be called synchronously
+    without blocking io_loop.
 
     This decorator can only be used on class methods, as it requires ``self``
     to make sure that calls are scheduled on instance level (connection) instead

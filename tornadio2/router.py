@@ -1,15 +1,28 @@
 # -*- coding: utf-8 -*-
+#
+# Copyright: (c) 2011 by the Serge S. Koval, see AUTHORS for more details.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
 """
     tornadio2.router
     ~~~~~~~~~~~~~~~~
 
     Transport protocol router and main entry point for all socket.io clients.
-
-    :copyright: (c) 2011 by the Serge S. Koval, see AUTHORS for more details.
-    :license: Apache, see LICENSE for more details.
 """
+
 from tornado import ioloop
-from tornado.web import RequestHandler, HTTPError
+from tornado.web import HTTPError
 
 from tornadio2 import persistent, polling, sessioncontainer, session, proto, preflight
 
@@ -38,6 +51,8 @@ DEFAULT_SETTINGS = {
 
 
 class HandshakeHandler(preflight.PreflightHandler):
+    """socket.io handshake handler"""
+
     def initialize(self, server):
         self.server = server
 
@@ -48,13 +63,12 @@ class HandshakeHandler(preflight.PreflightHandler):
 
         sess = self.server.create_session(self.request)
 
-        # TODO: Support for heartbeat
-        # TODO: Fix heartbeat timeout
+        # TODO: Fix heartbeat timeout. For now, it is adding 5 seconds to the client timeout.
         data = '%s:%d:%d:%s' % (
             sess.session_id,
             self.server.settings['heartbeat_interval'],
             # TODO: Fix me somehow.
-            self.server.settings['xhr_polling_timeout'] + 3,
+            self.server.settings['xhr_polling_timeout'] + 5,
             ','.join(t for t in self.server.settings.get('enabled_protocols'))
             )
 
@@ -73,11 +87,25 @@ class HandshakeHandler(preflight.PreflightHandler):
 
 
 class TornadioRouter(object):
+    """TornadIO2 router implementation"""
+
     def __init__(self,
                  connection,
                  user_settings=dict(),
                  namespace='socket.io',
                  io_loop=None):
+        """Constructor.
+
+        `connection`
+            SocketConnection class instance
+        `user_settings`
+            Settings
+        `namespace`
+            Router namespace, defaulted to 'socket.io'
+        `io_loop`
+            IOLoop instance, optional.
+        """
+
         # Store connection class
         self._connection = connection
 
@@ -122,13 +150,21 @@ class TornadioRouter(object):
 
     @property
     def urls(self):
+        """List of the URLs to be added to the Tornado application"""
         return self._transport_urls
 
     def apply_routes(self, routes):
+        """Feed list of the URLs to the routes list. Returns list"""
         routes.extend(self._transport_urls)
         return routes
 
     def create_session(self, request):
+        """Creates new session object and returns it.
+
+        `request`
+            Request that created the session. Will be used to get query string
+            parameters and cookies.
+        """
         # TODO: Possible optimization here for settings.get
         s = session.Session(self._connection,
                             self,
@@ -141,4 +177,6 @@ class TornadioRouter(object):
         return s
 
     def get_session(self, session_id):
+        """Get session by session id
+        """
         return self._sessions.get(session_id)

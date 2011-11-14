@@ -1,14 +1,27 @@
 # -*- coding: utf-8 -*-
+#
+# Copyright: (c) 2011 by the Serge S. Koval, see AUTHORS for more details.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
 """
     tornadio2.server
     ~~~~~~~~~~~~~~~~
 
     Implements handy wrapper to start FlashSocket server (if FlashSocket
     protocol is enabled). Shamesly borrowed from the SocketTornad.IO project.
-
-    :copyright: (c) 2011 by the Serge S. Koval, see AUTHORS for more details.
-    :license: Apache, see LICENSE for more details.
 """
+
 import logging
 
 from tornado import ioloop
@@ -35,6 +48,23 @@ class SocketServer(HTTPServer):
         start your server, you should not pass an IOLoop instance to this
         constructor. Each pre-forked child process will create its own
         IOLoop instance after the forking process.
+
+        `application`
+            Tornado application
+        `no_keep_alive`
+            Support keep alive for HTTP connections or not
+        `io_loop`
+            Optional io_loop instance.
+        `xheaders`
+            Extra headers
+        `ssl_options`
+            Tornado SSL options
+        `auto_start`
+            Set auto_start to False in order to have opportunities
+            to work with server object and/or perform some actions
+            after server is already created but before ioloop will start.
+            Attention: if you use auto_start param set to False
+            you should start ioloop manually
         """
         settings = application.settings
 
@@ -69,11 +99,6 @@ class SocketServer(HTTPServer):
             except Exception, ex:
                 logging.error('Failed to start Flash policy server: %s', ex)
 
-        # Set auto_start to False in order to have opportunities
-        # to work with server object and/or perform some actions
-        # after server is already created but before ioloop will start.
-        # Attention: if you use auto_start param set to False
-        # you should start ioloop manually
         if auto_start:
             logging.info('Entering IOLoop...')
             io_loop.start()

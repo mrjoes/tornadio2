@@ -1,8 +1,7 @@
-======
 Events
 ======
 
-Instead of having "just" messages, socket.io 0.7 introduced new concept - event.
+Instead of having "just" messages, socket.io 0.7 introduced new concept of events.
 Event is just a name and collection of parameters.
 
 TornadIO2 provides easy-to-use syntax sugar which emulates RPC calls from the client

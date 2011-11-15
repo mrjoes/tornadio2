@@ -16,6 +16,7 @@ Topics
    :maxdepth: 2
 
    migrating
+   unicode
    multiplexed
    events
    acknowledgments

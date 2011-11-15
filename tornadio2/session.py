@@ -380,7 +380,7 @@ class Session(sessioncontainer.SessionBase):
 
                 # It is kind of magic - if there's only one parameter
                 # and it is dict, unpack dictionary. Otherwise, pass
-                # as *args
+                # in args
                 if len(args) == 1 and isinstance(args[0], dict):
                     conn.on_event(event['name'], **args[0])
                 else:

@@ -63,18 +63,19 @@ class SocketConnection(object):
     connection class::
 
         class MyConnection(SocketConnection):
-            __endpoints__ = dict(clock=ClockConnection,
-                                 game=GameConnection)
+            __endpoints__ = {'/clock'=ClockConnection,
+                             '/game'=GameConnection}
 
-    SocketConnection has useful event decorator. To use it, wrap method with an
-    event() decorator::
+    ``ClockConnection`` and ``GameConnection`` should derive from the ``SocketConnection`` class as well.
+
+    ``SocketConnection`` has useful ``event`` decorator. Wrap method with it::
 
         class MyConnection(SocketConnection):
             @event('test')
             def test(self, msg):
                 print msg
 
-    And then, when you run following client code server should print 'Hello World'::
+    and then, when client will emit 'test' event, you should see 'Hello World' printed::
 
         sock.emit('test', {msg:'Hello World'});
 
@@ -112,8 +113,8 @@ class SocketConnection(object):
         You can also throw Tornado HTTPError to close connection.
 
         `request`
-            Tornado request handler object which you can use to read cookie,
-            remote IP address, etc.
+            ``ConnectionInfo`` object which contains caller IP address, query string
+            parameters and cookies associated with this request.
 
         For example::
 

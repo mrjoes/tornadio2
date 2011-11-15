@@ -77,10 +77,11 @@ class TornadioPollingHandlerBase(preflight.PreflightHandler):
         if self.session.is_closed or not self.preflight():
             raise HTTPError(401)
 
-        data = self.request.body
+        # Grab body and decode it (socket.io always sends data in utf-8)
+        data = self.request.body.decode('utf-8')
 
         # IE XDomainRequest support
-        if data.startswith('data='):
+        if data.startswith(u'data='):
             data = data[5:]
 
         # Process packets one by one
@@ -257,6 +258,7 @@ class TornadioJSONPHandler(TornadioXHRPollingHandler):
         if self.session.is_closed or not self.preflight():
             raise HTTPError(401)
 
+        # Socket.io always send data utf-8 encoded.
         data = self.request.body
 
         # IE XDomainRequest support
@@ -264,7 +266,11 @@ class TornadioJSONPHandler(TornadioXHRPollingHandler):
             logging.error('Malformed JSONP POST request')
             raise HTTPError(403)
 
-        data = urllib.unquote(data[2:])
+        # Special case
+        data = urllib.unquote(data[2:]).decode('utf-8')
+
+        if data.startswith(u'"'):
+            data = data.strip(u'"')
 
         # Process packets one by one
         packets = proto.decode_frames(data)

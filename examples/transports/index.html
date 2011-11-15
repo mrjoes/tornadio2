@@ -23,6 +23,8 @@
             return transports.push($(this).attr('id'));
         });
 
+        console.log(transports);
+
         // Hack to work around bug 251, I really hope it is going to be fixed.
         // https://github.com/LearnBoost/socket.io-client/issues/251
         // Alternative way to do full reconnect is to pass 'force new connection',

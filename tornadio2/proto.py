@@ -48,7 +48,7 @@ ERROR = '7'
 NOOP = '8'
 
 # utf-8 encoded frame separator
-FRAME_SEPARATOR = u'\ufffd'.encode('utf-8')
+FRAME_SEPARATOR = u'\ufffd'
 
 
 def disconnect(endpoint=None):
@@ -57,7 +57,7 @@ def disconnect(endpoint=None):
     `endpoint`
         Optional endpoint name
     """
-    return '0::%s' % (
+    return u'0::%s' % (
         endpoint or ''
         )
 
@@ -68,7 +68,7 @@ def connect(endpoint=None):
     `endpoint`
         Optional endpoint name
     """
-    return '1::%s' % (
+    return u'1::%s' % (
         endpoint or ''
         )
 
@@ -76,7 +76,7 @@ def connect(endpoint=None):
 def heartbeat():
     """Generate heartbeat message.
     """
-    return '2::'
+    return u'2::'
 
 
 def message(endpoint, msg, message_id=None):
@@ -93,19 +93,19 @@ def message(endpoint, msg, message_id=None):
     if (not isinstance(msg, (unicode, str)) and
         isinstance(msg, (object, dict))):
         if msg is not None:
-            return '4:%s:%s:%s' % (
+            return u'4:%s:%s:%s' % (
                 message_id or '',
                 endpoint or '',
-                json.dumps(msg, **json_decimal_args).encode('utf-8')
+                json.dumps(msg, **json_decimal_args)
                 )
         else:
-            # TODO: Log something
-            return ''
+            # TODO: Log something?
+            return u''
     else:
-        return '3:%s:%s:%s' % (
-            message_id or '',
-            endpoint or '',
-            msg.encode('utf-8') if isinstance(msg, unicode) else str(msg)
+        return u'3:%s:%s:%s' % (
+            message_id or u'',
+            endpoint or u'',
+            msg if isinstance(msg, unicode) else str(msg).decode('utf-8')
             )
 
 
@@ -137,10 +137,10 @@ def event(endpoint, name, message_id, *args, **kwargs):
             args=[kwargs]
         )
 
-    return '5:%s:%s:%s' % (
+    return u'5:%s:%s:%s' % (
         message_id or '',
         endpoint or '',
-        json.dumps(evt).encode('utf-8')
+        json.dumps(evt)
     )
 
 
@@ -152,8 +152,8 @@ def ack(endpoint, message_id):
     `message_id`
         Message id to acknowledge
     """
-    return '6::%s:%s' % (endpoint or '',
-                         message_id)
+    return u'6::%s:%s' % (endpoint or '',
+                          message_id)
 
 
 def error(endpoint, reason, advice=None):
@@ -166,14 +166,14 @@ def error(endpoint, reason, advice=None):
     `advice`
         Error advice
     """
-    return '7::%s:%s+%s' % (endpoint or '',
-                            (reason or '').encode('utf-8'),
-                            (advice or '').encode('utf-8'))
+    return u'7::%s:%s+%s' % (endpoint or '',
+                             (reason or ''),
+                             (advice or ''))
 
 
 def noop():
     """Generate noop packet."""
-    return '8::'
+    return u'8::'
 
 
 def json_dumps(msg):
@@ -202,6 +202,8 @@ def decode_frames(data):
 
     """
     # Single message - nothing to decode here
+    assert isinstance(data, unicode), 'frame is not unicode'
+
     if not data.startswith(FRAME_SEPARATOR):
         return [data]
 
@@ -212,13 +214,13 @@ def decode_frames(data):
     frame_len = len(FRAME_SEPARATOR)
 
     while data[idx:idx + frame_len] == FRAME_SEPARATOR:
-        idx += len(FRAME_SEPARATOR)
+        idx += 1
 
         # Grab message length
         len_start = idx
         idx = data.find(FRAME_SEPARATOR, idx)
         msg_len = int(data[len_start:idx])
-        idx += len(FRAME_SEPARATOR)
+        idx += 1
 
         # Grab message
         msg_data = data[idx:idx + msg_len]
@@ -229,7 +231,7 @@ def decode_frames(data):
     return packets
 
 
-# Encode expects packets in UTF-8 encoding
+# Encode expects packets in unicode
 def encode_frames(packets):
     """Encode list of packets.
 
@@ -242,12 +244,11 @@ def encode_frames(packets):
 
     # Exactly one packet - don't do any frame encoding
     if len(packets) == 1:
-        return packets[0]
+        return packets[0].encode('utf-8')
 
     # Multiple packets
-    frames = ''
+    frames = u''.join(u'%s%d%s%s' % (FRAME_SEPARATOR, len(p),
+                                     FRAME_SEPARATOR, p)
+                      for p in packets)
 
-    for p in packets:
-        frames += '%s%d%s%s' % (FRAME_SEPARATOR, len(p), FRAME_SEPARATOR, p)
-
-    return frames
+    return frames.encode('utf-8')

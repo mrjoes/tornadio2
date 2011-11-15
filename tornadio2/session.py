@@ -382,7 +382,10 @@ class Session(sessioncontainer.SessionBase):
                 # and it is dict, unpack dictionary. Otherwise, pass
                 # in args
                 if len(args) == 1 and isinstance(args[0], dict):
-                    conn.on_event(event['name'], **args[0])
+                    # Fix for the http://bugs.python.org/issue4978
+                    str_args = dict((str(x), y) for x, y in args[0].iteritems())
+
+                    conn.on_event(event['name'], **str_args)
                 else:
                     conn.on_event(event['name'], *args)
 

@@ -266,11 +266,12 @@ class TornadioJSONPHandler(TornadioXHRPollingHandler):
             logging.error('Malformed JSONP POST request')
             raise HTTPError(403)
 
-        # Special case
+        # Grab data
         data = urllib.unquote(data[2:]).decode('utf-8')
 
+        # If starts with double quote, it is json encoded (socket.io workaround)
         if data.startswith(u'"'):
-            data = data.strip(u'"')
+            data = proto.json_load(data)
 
         # Process packets one by one
         packets = proto.decode_frames(data)

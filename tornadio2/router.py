@@ -21,7 +21,7 @@
     Transport protocol router and main entry point for all socket.io clients.
 """
 
-from tornado import ioloop
+from tornado import ioloop, version_info
 from tornado.web import HTTPError
 
 from tornadio2 import persistent, polling, sessioncontainer, session, proto, preflight
@@ -105,6 +105,10 @@ class TornadioRouter(object):
         `io_loop`
             IOLoop instance, optional.
         """
+
+        # TODO: Version check
+        if version_info[0] < 2:
+            raise Exception('TornadIO2 requires Tornado 2.0 or higher.')
 
         # Store connection class
         self._connection = connection

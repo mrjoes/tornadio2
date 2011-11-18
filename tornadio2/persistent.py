@@ -80,6 +80,6 @@ class TornadioWebSocketHandler(WebSocketHandler):
             self._detach()
 
 
-class TornadioFlashSocketHandler(WebSocketHandler):
+class TornadioFlashSocketHandler(TornadioWebSocketHandler):
     # Transport name
     name = 'flashsocket'

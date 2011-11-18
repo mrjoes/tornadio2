@@ -47,7 +47,7 @@ ACK = '6'
 ERROR = '7'
 NOOP = '8'
 
-# utf-8 encoded frame separator
+# socket.io frame separator
 FRAME_SEPARATOR = u'\ufffd'
 
 
@@ -186,7 +186,7 @@ def json_dumps(msg):
 
 
 def json_load(msg):
-    """Load json
+    """Load json-encoded object
 
     `msg`
         json encoded object
@@ -211,9 +211,7 @@ def decode_frames(data):
     idx = 0
     packets = []
 
-    frame_len = len(FRAME_SEPARATOR)
-
-    while data[idx:idx + frame_len] == FRAME_SEPARATOR:
+    while data[idx:idx + 1] == FRAME_SEPARATOR:
         idx += 1
 
         # Grab message length

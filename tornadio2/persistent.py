@@ -68,8 +68,14 @@ class TornadioWebSocketHandler(WebSocketHandler):
         self._detach()
 
     def send_messages(self, messages):
-        for m in messages:
-            self.write_message(m)
+        try:
+            for m in messages:
+                self.write_message(m)
+        except IOError:
+            if self.client_terminated:
+                logging.debug('Dropping active websocket connection due to IOError.')
+
+            self._detach()
 
     def session_closed(self):
         try:

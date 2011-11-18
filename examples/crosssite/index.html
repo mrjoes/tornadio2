@@ -5,7 +5,7 @@
   <script src="socket.io.js"></script>
   <script>
     $(function() {
-        var s = new io.connect('http://localhost:8002', {
+        var s = new io.connect('http://' + window.location.hostname + ':8002', {
             rememberTransport: false
         });
 

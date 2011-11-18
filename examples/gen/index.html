@@ -5,7 +5,7 @@
   <script src="socket.io.js"></script>
   <script>
     $(function() {
-        var query = new io.connect('http://localhost:8001');
+        var query = new io.connect('http://' + window.location.host);
         var num = 0;
 
         // Establish event handlers

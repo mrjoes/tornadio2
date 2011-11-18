@@ -5,9 +5,9 @@
   <script src="socket.io.js"></script>
   <script>
     $(function() {
-        var sock = new io.connect('http://localhost:8001'),
-            chat = new io.connect('http://localhost:8001/chat'),
-            ping = new io.connect('http://localhost:8001/ping');
+        var sock = new io.connect('http://' + window.location.host),
+            chat = new io.connect('http://' + window.location.host + '/chat'),
+            ping = new io.connect('http://' + window.location.host + '/ping');
 
         // Establish event handlers
         sock.on('disconnect', function() {

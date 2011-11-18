@@ -5,7 +5,7 @@
   <script src="socket.io.js"></script>
   <script>
     $(function() {
-        var ping = new io.connect('http://localhost:8001');
+        var ping = new io.connect('http://' + window.location.host);
 
         // Establish event handlers
         ping.on('disconnect', function() {

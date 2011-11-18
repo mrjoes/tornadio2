@@ -31,7 +31,7 @@
         // but you will lose multiplexing.
         io.j = [];
         io.sockets = [];
-        conn = io.connect('http://localhost:8001/', {
+        conn = io.connect('http://' + window.location.host + '/', {
                   //'force new connection': true,
                   transports: transports,
                   rememberTransport: false

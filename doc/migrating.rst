@@ -3,10 +3,10 @@ Migrating from previous TornadIO version
 
 TornadIO2 has some incompatible API changes.
 
-1. Instead of having one rule and a router handler, TornadIO2 exposes transports
+1. Instead of having one router handler, TornadIO2 exposes transports
 as first-class Tornado handlers. This saves some memory per active connection,
-because instead of having two handlers per request, you will now have only one.
-This change affected how TornadIO2 is initialized and plugged into your Tornado application::
+because instead of having two handlers per request (router and transport), you will now have only one.
+This change affects how TornadIO2 is initialized and plugged into your Tornado application::
 
     ChatServer = tornadio2.router.TornadioRouter(ChatConnection)
     # Fill your routes here

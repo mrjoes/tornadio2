@@ -24,24 +24,27 @@ knowledge. If you don't know how to use it, please read Tornado tutorial, which 
 
 If you're familiar with Tornado, do following to add support for Socket.IO to your application:
 
-1. Derive from tornadio2.SocketConnection class and override on_message method (on_open/on_close are optional):
-::
+1. Derive from tornadio2.SocketConnection class and override on_message method (on_open/on_close are optional)::
+```python
 
     class MyConnection(tornadio2.SocketConnection):
         def on_message(self, message):
            pass
+```
 
-2. Create TornadIO2 server for your connection:
-::
+2. Create TornadIO2 server for your connection::
+```python
 
     MyRouter = tornadio2.TornadioRouter(MyConnection)
+```
 
-3. Add your handler routes to the Tornado application:
-::
+3. Add your handler routes to the Tornado application::
+```python
 
   application = tornado.web.Application(
     MyRouter.urls,
     socket_io_port = 8000)
+```
 
 4. Start your application
 5. You have your `socket.io` server running at port 8000. Simple, right?
@@ -53,9 +56,11 @@ We provide customized version (shamelessly borrowed from the SocketTornad.IO lib
 simplifies start of your TornadIO server.
 
 To start it, do following (assuming you created application object before)::
+```python
 
   if __name__ == "__main__":
     socketio_server = SocketServer(application)
+```
 
 SocketServer will automatically start Flash policy server, if required.
 

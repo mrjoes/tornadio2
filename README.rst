@@ -16,6 +16,14 @@ transport library on top of the `Tornado <http://www.tornadoweb.org>`_ framework
 TornadIO2 is compatible with 0.7+ version of the Socket.IO and implements
 most of the features found in original Socket.IO server software.
 
+What is Socket.IO?
+------------------
+
+Socket.IO aims to make realtime apps possible in every browser and mobile device, blurring the differences between the different transport mechanisms. It's care-free realtime 100% in JavaScript.
+
+You can use it to build push service, games, etc. Socket.IO will adapt to the clients browser and will use most effective transport
+protocol available.
+
 Getting Started
 ---------------
 In order to start working with the TornadIO2 library, you have to have some basic Tornado

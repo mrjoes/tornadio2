@@ -96,6 +96,9 @@ class TornadioPollingHandlerBase(preflight.PreflightHandler):
         self.set_header('Content-Type', 'text/plain; charset=UTF-8')
         self.finish()
 
+    def check_xsrf_cookie(self):
+        pass
+
     def send_messages(self, messages):
         """Called by the session when some data is available"""
         raise NotImplementedError()
@@ -267,7 +270,7 @@ class TornadioJSONPHandler(TornadioXHRPollingHandler):
             raise HTTPError(403)
 
         # Grab data
-        data = urllib.unquote(data[2:]).decode('utf-8')
+        data = urllib.unquote_plus(data[2:]).decode('utf-8')
 
         # If starts with double quote, it is json encoded (socket.io workaround)
         if data.startswith(u'"'):

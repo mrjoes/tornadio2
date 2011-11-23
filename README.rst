@@ -77,6 +77,11 @@ For more information, check `TornadIO2 documentation <http://readthedocs.org/doc
 Examples
 ~~~~~~~~
 
+Acknowledgment
+^^^^^^^^^^^^^^
+
+Ping sample which shows how to use events to work in request-response mode. It is in the ``examples/ackping`` directory.
+
 Cross site
 ^^^^^^^^^^
 

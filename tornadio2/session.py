@@ -378,6 +378,8 @@ class Session(sessioncontainer.SessionBase):
 
                 args = event['args']
 
+                ack_response = None
+
                 # It is kind of magic - if there's only one parameter
                 # and it is dict, unpack dictionary. Otherwise, pass
                 # in args
@@ -385,18 +387,24 @@ class Session(sessioncontainer.SessionBase):
                     # Fix for the http://bugs.python.org/issue4978 for older Python versions
                     str_args = dict((str(x), y) for x, y in args[0].iteritems())
 
-                    conn.on_event(event['name'], **str_args)
+                    ack_response = conn.on_event(event['name'], **str_args)
                 else:
-                    conn.on_event(event['name'], *args)
+                    ack_response = conn.on_event(event['name'], *args)
 
                 if msg_id:
-                    self.send_message(proto.ack(msg_endpoint, msg_id))
+                    if msg_id.endswith('+'):
+                        msg_id = msg_id[:-1]
+
+                    self.send_message(proto.ack(msg_endpoint, msg_id, ack_response))
             elif msg_type == proto.ACK:
                 # Handle ACK
                 ack_data = msg_data.split('+', 2)
 
-                # TODO: Support custom data sent from the server
-                conn.deque_ack(int(ack_data[0]))
+                data = None
+                if len(ack_data) > 1:
+                    data = proto.json_load(ack_data[1])
+
+                conn.deque_ack(int(ack_data[0]), data)
             elif msg_type == proto.ERROR:
                 # TODO: Pass it to handler?
                 logging.error('Incoming error: %s' % msg_data)

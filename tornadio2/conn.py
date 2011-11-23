@@ -271,12 +271,12 @@ class SocketConnection(object):
 
         return ack_id
 
-    def deque_ack(self, msg_id):
+    def deque_ack(self, msg_id, ack_data):
         """Dequeue acknowledgment callback"""
         if msg_id in self.ack_queue:
             time_stamp, callback, message = self.ack_queue.pop(msg_id)
 
-            callback(message)
+            callback(message, ack_data)
         else:
             logging.error('Received invalid msg_id for ACK: %s' % msg_id)
 

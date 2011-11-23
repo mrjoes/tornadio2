@@ -83,6 +83,8 @@ def sync_engine(func):
             if isinstance(gen, types.GeneratorType):
                 data.runner = SyncRunner(gen, finished)
                 data.runner.run()
+            else:
+                return gen
 
         # Completion callback
         def finished():

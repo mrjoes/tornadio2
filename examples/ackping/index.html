@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+  <script src="socket.io.js"></script>
+  <script>
+    $(function() {
+        var ping = new io.connect('http://' + window.location.host);
+
+        // Establish event handlers
+        ping.on('disconnect', function() {
+            ping.socket.reconnect();
+        });
+
+        function getPrintableDate(date) {
+          return date.getFullYear().toString() + '/' +
+             (date.getMonth()+1).toString() + '/' +
+             date.getDate().toString() + ' ' +
+             date.getHours().toString() + ':' +
+             date.getMinutes().toString() + ':' +
+             date.getSeconds().toString() + '.' +
+             date.getMilliseconds().toString();
+        }
+
+        function encodeDate(date)
+        {
+            return [date.getHours(), date.getMinutes(), date.getSeconds(), date.getMilliseconds()];
+        }
+
+        function decodeDate(data)
+        {
+            var date = new Date();
+            return new Date(date.getFullYear(), date.getMonth(), date.getDate(),
+                            data[0], data[1], data[2], data[3]);
+        }
+
+        function sendPing()
+        {
+            ping.emit('ping', encodeDate(new Date()), function(clientDate, serverDate) {
+              var client = decodeDate(clientDate);
+              var server = decodeDate(serverDate);
+              var now = new Date();
+
+              $('#ping').html('Ping: ' + (now.getTime() - client.getTime()).toString() + ' ms.<br/>' +
+                              'C2S: ' + (server.getTime() - client.getTime()).toString() + ' ms.<br/>'
+                              );
+            });
+
+            setTimeout(sendPing, 5000);
+        }
+        sendPing();
+    });
+</script>
+</head>
+<body>
+<h3>Ping!</h3>
+<div id="ping"></div>
+</body>
+</html>

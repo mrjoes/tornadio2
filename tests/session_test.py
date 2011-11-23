@@ -78,6 +78,7 @@ class DummyConnection(conn.SocketConnection):
     def on_event(self, name, *args, **kwargs):
         self.events.append((name, kwargs))
         self.emit(name, **kwargs)
+        return name
 
     def on_close(self):
         self.is_open = False
@@ -304,8 +305,9 @@ def test_ack():
     eq_(transport.pop_outgoing(), '6:::1')
 
     # Send with ACK
-    def handler(message):
-        eq_(message, 'abc')
+    def handler(msg, data):
+        eq_(msg, 'abc')
+        eq_(data, None)
 
         conn.send('yes')
 
@@ -319,3 +321,10 @@ def test_ack():
     # Check if handler was called
     eq_(transport.pop_outgoing(), '3:::yes')
 
+    # Test ack with event
+    # Send event with multiple parameters
+    transport.recv(proto.event(None, 'test', 1, a=10, b=20))
+
+    # Check outgoing
+    eq_(transport.pop_outgoing(), proto.event(None, 'test', None, a=10, b=20))
+    eq_(transport.pop_outgoing(), proto.ack(None, 1, 'test'))

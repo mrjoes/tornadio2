@@ -144,16 +144,28 @@ def event(endpoint, name, message_id, *args, **kwargs):
     )
 
 
-def ack(endpoint, message_id):
+def ack(endpoint, message_id, ack_response=None):
     """Generate ACK packet.
 
     `endpoint`
         Optional endpoint name
     `message_id`
         Message id to acknowledge
+    `ack_response`
+        Acknowledgment response data (will be json serialized)
     """
-    return u'6::%s:%s' % (endpoint or '',
-                          message_id)
+    if ack_response is not None:
+        if not isinstance(ack_response, tuple):
+            ack_response = (ack_response,)
+
+        data = json_dumps(ack_response)
+
+        return u'6::%s:%s+%s' % (endpoint or '',
+                                 message_id,
+                                 data)
+    else:
+        return u'6::%s:%s' % (endpoint or '',
+                              message_id)
 
 
 def error(endpoint, reason, advice=None):

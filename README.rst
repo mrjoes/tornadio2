@@ -19,11 +19,11 @@ most of the features found in original Socket.IO server software.
 Key features
 ^^^^^^^^^^^^
 
-* Supports Socket.IO 0.8 protocol and related features
-* Full unicode support
-* Support for generator-based asynchronous code (tornado.gen API)
-* Statistics capture (packets per second, etc)
-* Actively maintained
+- Supports Socket.IO 0.8 protocol and related features
+- Full unicode support
+- Support for generator-based asynchronous code (tornado.gen API)
+- Statistics capture (packets per second, etc)
+- Actively maintained
 
 What is Socket.IO?
 ------------------

@@ -10,11 +10,20 @@ Contributors
 Introduction
 ------------
 
-This is implementation of the `Socket.IO <http://socket.io>`_ realtime
+This is python server implementation of the `Socket.IO <http://socket.io>`_ realtime
 transport library on top of the `Tornado <http://www.tornadoweb.org>`_ framework.
 
 TornadIO2 is compatible with 0.7+ version of the Socket.IO and implements
 most of the features found in original Socket.IO server software.
+
+Key features
+^^^^^^^^^^^^
+
+* Supports Socket.IO 0.8 protocol and related features
+* Full unicode support
+* Support for generator-based asynchronous code
+* Actively maintained
+* Statistics capturing (packets per second, etc)
 
 What is Socket.IO?
 ------------------

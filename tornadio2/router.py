@@ -24,7 +24,7 @@
 from tornado import ioloop, version_info
 from tornado.web import HTTPError
 
-from tornadio2 import persistent, polling, sessioncontainer, session, proto, preflight
+from tornadio2 import persistent, polling, sessioncontainer, session, proto, preflight, stats
 
 PROTOCOLS = {
     'websocket': persistent.TornadioWebSocketHandler,
@@ -129,6 +129,10 @@ class TornadioRouter(object):
                                                          check_interval,
                                                          self.io_loop)
         self._sessions_cleanup.start()
+
+        # Stats
+        self.stats = stats.StatsCollector()
+        self.stats.start(self.io_loop)
 
         # Initialize URLs
         self._transport_urls = [

@@ -26,7 +26,7 @@ import urllib
 
 from tornado.web import HTTPError, asynchronous
 
-from tornadio2 import proto, preflight
+from tornadio2 import proto, preflight, stats
 
 
 class TornadioPollingHandlerBase(preflight.PreflightHandler):
@@ -86,6 +86,10 @@ class TornadioPollingHandlerBase(preflight.PreflightHandler):
 
         # Process packets one by one
         packets = proto.decode_frames(data)
+
+        # Tracking
+        self.server.stats.on_packet_recv(len(packets))
+
         for p in packets:
             try:
                 self.session.raw_message(p)
@@ -167,6 +171,9 @@ class TornadioXHRPollingHandler(TornadioPollingHandlerBase):
         super(TornadioXHRPollingHandler, self)._detach()
 
     def send_messages(self, messages):
+        # Tracking
+        self.server.stats.on_packet_sent(len(messages))
+
         # Encode multiple messages as UTF-8 string
         data = proto.encode_frames(messages)
 
@@ -219,6 +226,10 @@ class TornadioHtmlFileHandler(TornadioPollingHandlerBase):
         self.session.reset_heartbeat()
 
     def send_messages(self, messages):
+        # Tracking
+        self.server.stats.on_packet_sent(len(messages))
+
+        # Encode frames and send data
         data = proto.encode_frames(messages)
 
         self.write(
@@ -278,6 +289,10 @@ class TornadioJSONPHandler(TornadioXHRPollingHandler):
 
         # Process packets one by one
         packets = proto.decode_frames(data)
+
+        # Tracking
+        self.server.stats.on_packet_recv(len(packets))
+
         for p in packets:
             try:
                 self.session.raw_message(p)
@@ -291,6 +306,9 @@ class TornadioJSONPHandler(TornadioXHRPollingHandler):
     def send_messages(self, messages):
         if self._index is None:
             raise HTTPError(401)
+
+        # Tracking
+        self.server.stats.on_packet_sent(len(messages))
 
         data = proto.encode_frames(messages)
 

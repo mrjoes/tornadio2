@@ -25,6 +25,7 @@ import logging
 import tornado
 from tornado.websocket import WebSocketHandler
 
+from tornadio2 import stats
 
 class TornadioWebSocketHandler(WebSocketHandler):
     """Websocket protocol handler"""
@@ -58,6 +59,9 @@ class TornadioWebSocketHandler(WebSocketHandler):
             self.session = None
 
     def on_message(self, message):
+        # Tracking
+        self.server.stats.on_packet_recv(1)
+
         try:
             self.session.raw_message(message)
         except Exception:
@@ -68,6 +72,9 @@ class TornadioWebSocketHandler(WebSocketHandler):
         self._detach()
 
     def send_messages(self, messages):
+        # Tracking
+        self.server.stats.on_packet_sent(len(messages))
+
         try:
             for m in messages:
                 self.write_message(m)

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="http://yandex.st/jquery/1.7.1/jquery.min.js"></script>
+  <script src="http://yandex.st/jquery/flot/0.7/jquery.flot.min.js"></script>
+  <script src="socket.io.js"></script>
+  <script>
+    $(function() {
+        var stats = new io.connect('http://' + window.location.host);
+
+        // Establish event handlers
+        stats.on('disconnect', function() {
+            stats.socket.reconnect();
+        });
+
+        var graph_items = ['active_sessions',
+                           'avg_packets_sent',
+                           'avg_packets_recv'];
+
+        // Flot stuff
+        var data = [], totalPoints = 60;
+
+        for (var i = 0; i < totalPoints; ++i)
+        {
+          item = {};
+
+          for (var j = 0; j < graph_items.length; ++j)
+            item[graph_items[j]] = 0;
+
+          data.push(item);
+        }
+
+        function appendData(values)
+        {
+            if (data.length >= totalPoints)
+              data = data.slice(1);
+
+            data.push(values);
+        }
+
+        function convertValues(name)
+        {
+          var res = [];
+          for (var i = 0; i < data.length; ++i)
+          {
+            res.push([i, data[i][name]]);
+          }
+          return res;
+        }
+
+        function prepareGraphData()
+        {
+          var res = [];
+
+          for (var i in graph_items)
+          {
+            var name = graph_items[i];
+
+            res.push({
+              data: convertValues(name)
+            });
+          }
+
+          return res;
+        }
+
+        function queryStats()
+        {
+            stats.emit('stats', function(data) {
+              appendData(data);
+
+              plot.setData(prepareGraphData());
+              plot.draw();
+            });
+
+            setTimeout(queryStats, 1000);
+        }
+
+        var options = {
+          series: { shadowSize: 0 },
+          yaxis: { min: 0, max: 100 },
+          xaxis: { show: false }
+        };
+
+        //var plot = $.plot($('#placeholder'), [], options);
+        var plot = $.plot('#placeholder', prepareGraphData(), options);
+
+        queryStats();
+    });
+</script>
+</head>
+<body>
+<h3>Connection stats!</h3>
+ <div id="placeholder" style="width:600px;height:300px"></div>
+</body>
+</html>

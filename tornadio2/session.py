@@ -26,7 +26,7 @@ import logging
 
 from tornado.web import HTTPError
 
-from tornadio2 import sessioncontainer, proto, periodic
+from tornadio2 import sessioncontainer, proto, periodic, stats
 
 
 class ConnectionInfo(object):
@@ -90,6 +90,9 @@ class Session(sessioncontainer.SessionBase):
         self.server = server
         self.send_queue = []
         self.handler = None
+
+        # Stats
+        server.stats.session_opened()
 
         self.remote_ip = request.remote_ip
 
@@ -218,6 +221,9 @@ class Session(sessioncontainer.SessionBase):
                     self.conn.on_close()
                 finally:
                     self.conn.is_closed = True
+
+                    # Stats
+                    self.server.stats.session_closed()
 
                 # Send disconnection message
                 self.send_message(proto.disconnect())
@@ -376,7 +382,7 @@ class Session(sessioncontainer.SessionBase):
                 # Javascript event
                 event = proto.json_load(msg_data)
 
-                args = event['args']
+                args = event.get('args', [])
 
                 ack_response = None
 

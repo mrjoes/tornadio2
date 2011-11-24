@@ -21,9 +21,9 @@ Key features
 
 * Supports Socket.IO 0.8 protocol and related features
 * Full unicode support
-* Support for generator-based asynchronous code
+* Support for generator-based asynchronous code (tornado.gen API)
+* Statistics capture (packets per second, etc)
 * Actively maintained
-* Statistics capturing (packets per second, etc)
 
 What is Socket.IO?
 ------------------

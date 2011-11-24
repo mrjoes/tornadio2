@@ -2,7 +2,7 @@ from collections import deque
 
 from nose.tools import eq_, raises
 
-from tornadio2 import session, proto, conn
+from tornadio2 import session, proto, conn, stats
 
 from simplejson import JSONDecodeError
 
@@ -25,6 +25,7 @@ class DummyServer(object):
                                    'jsonp-polling', 'htmlfile'],
                 xhr_polling_timeout=20
         )
+        self.stats = stats.StatsCollector()
 
     def create_session(self, handler):
         return session.Session(self._connection,

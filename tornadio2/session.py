@@ -157,6 +157,9 @@ class Session(sessioncontainer.SessionBase):
         self.handler = handler
         self.promote()
 
+        # Stats
+        self.server.stats.connection_opened()
+
         return True
 
     def remove_handler(self, handler):
@@ -171,6 +174,8 @@ class Session(sessioncontainer.SessionBase):
 
         self.handler = None
         self.promote()
+
+        self.server.stats.connection_closed()
 
     def send_message(self, pack):
         """Send socket.io encoded message
@@ -382,7 +387,10 @@ class Session(sessioncontainer.SessionBase):
                 # Javascript event
                 event = proto.json_load(msg_data)
 
-                args = event.get('args', [])
+                # TODO: Verify if args = event.get('args', []) won't be slower.
+                args = event.get('args')
+                if args is None:
+                    args = []
 
                 ack_response = None
 

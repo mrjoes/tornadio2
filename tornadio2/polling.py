@@ -45,11 +45,11 @@ class TornadioPollingHandlerBase(preflight.PreflightHandler):
 
         # If session was not found, ignore it
         if session is None:
-            raise HTTPError(401)
+            raise HTTPError(401, 'Invalid session')
 
         # If session is closed, but there are some pending messages left - make sure to send them
         if session.is_closed and not session.send_queue:
-            raise HTTPError(401)
+            raise HTTPError(401, 'Invalid session')
 
         return session
 
@@ -66,39 +66,43 @@ class TornadioPollingHandlerBase(preflight.PreflightHandler):
         """Default GET handler."""
         raise NotImplementedError()
 
-    @asynchronous
     def post(self, session_id):
         """Handle incoming POST request"""
+        try:
+            # Stats
+            self.server.stats.connection_opened()
 
-        # Get session
-        self.session = self._get_session(session_id)
+            # Get session
+            self.session = self._get_session(session_id)
 
-        # Can not send messages to closed session or if preflight() failed
-        if self.session.is_closed or not self.preflight():
-            raise HTTPError(401)
+            # Can not send messages to closed session or if preflight() failed
+            if self.session.is_closed or not self.preflight():
+                raise HTTPError(401)
 
-        # Grab body and decode it (socket.io always sends data in utf-8)
-        data = self.request.body.decode('utf-8')
+            # Grab body and decode it (socket.io always sends data in utf-8)
+            data = self.request.body.decode('utf-8')
 
-        # IE XDomainRequest support
-        if data.startswith(u'data='):
-            data = data[5:]
+            # IE XDomainRequest support
+            if data.startswith(u'data='):
+                data = data[5:]
 
-        # Process packets one by one
-        packets = proto.decode_frames(data)
+            # Process packets one by one
+            packets = proto.decode_frames(data)
 
-        # Tracking
-        self.server.stats.on_packet_recv(len(packets))
+            # Tracking
+            self.server.stats.on_packet_recv(len(packets))
 
-        for p in packets:
-            try:
-                self.session.raw_message(p)
-            except Exception:
-                # Close session if something went wrong
-                self.session.close()
+            for p in packets:
+                try:
+                    self.session.raw_message(p)
+                except Exception:
+                    # Close session if something went wrong
+                    self.session.close()
 
-        self.set_header('Content-Type', 'text/plain; charset=UTF-8')
-        self.finish()
+            self.set_header('Content-Type', 'text/plain; charset=UTF-8')
+            self.finish()
+        finally:
+            self.server.stats.connection_closed()
 
     def check_xsrf_cookie(self):
         pass
@@ -263,45 +267,50 @@ class TornadioJSONPHandler(TornadioXHRPollingHandler):
 
         super(TornadioJSONPHandler, self).get(session_id)
 
-    @asynchronous
     def post(self, session_id):
-        # Get session
-        self.session = self._get_session(session_id)
+        try:
+            # Stats
+            self.server.stats.connection_opened()
 
-        # Can not send messages to closed session or if preflight() failed
-        if self.session.is_closed or not self.preflight():
-            raise HTTPError(401)
+            # Get session
+            self.session = self._get_session(session_id)
 
-        # Socket.io always send data utf-8 encoded.
-        data = self.request.body
+            # Can not send messages to closed session or if preflight() failed
+            if self.session.is_closed or not self.preflight():
+                raise HTTPError(401)
 
-        # IE XDomainRequest support
-        if not data.startswith('d='):
-            logging.error('Malformed JSONP POST request')
-            raise HTTPError(403)
+            # Socket.io always send data utf-8 encoded.
+            data = self.request.body
 
-        # Grab data
-        data = urllib.unquote_plus(data[2:]).decode('utf-8')
+            # IE XDomainRequest support
+            if not data.startswith('d='):
+                logging.error('Malformed JSONP POST request')
+                raise HTTPError(403)
 
-        # If starts with double quote, it is json encoded (socket.io workaround)
-        if data.startswith(u'"'):
-            data = proto.json_load(data)
+            # Grab data
+            data = urllib.unquote_plus(data[2:]).decode('utf-8')
 
-        # Process packets one by one
-        packets = proto.decode_frames(data)
+            # If starts with double quote, it is json encoded (socket.io workaround)
+            if data.startswith(u'"'):
+                data = proto.json_load(data)
 
-        # Tracking
-        self.server.stats.on_packet_recv(len(packets))
+            # Process packets one by one
+            packets = proto.decode_frames(data)
 
-        for p in packets:
-            try:
-                self.session.raw_message(p)
-            except Exception:
-                # Close session if something went wrong
-                self.session.close()
+            # Tracking
+            self.server.stats.on_packet_recv(len(packets))
 
-        self.set_header('Content-Type', 'text/plain; charset=UTF-8')
-        self.finish()
+            for p in packets:
+                try:
+                    self.session.raw_message(p)
+                except Exception:
+                    # Close session if something went wrong
+                    self.session.close()
+
+            self.set_header('Content-Type', 'text/plain; charset=UTF-8')
+            self.finish()
+        finally:
+            self.server.stats.connection_closed()
 
     def send_messages(self, messages):
         if self._index is None:

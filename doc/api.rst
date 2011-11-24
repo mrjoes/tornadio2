@@ -16,3 +16,4 @@ API
    mod_server
    mod_session
    mod_sessioncontainer
+   mod_stats

@@ -34,21 +34,23 @@
                             data[0], data[1], data[2], data[3]);
         }
 
-        function sendPing()
-        {
-            ping.emit('ping', encodeDate(new Date()), function(clientDate, serverDate) {
-              var client = decodeDate(clientDate);
-              var server = decodeDate(serverDate);
-              var now = new Date();
+        ping.on('connect', function() {
+          function sendPing()
+          {
+              ping.emit('ping', encodeDate(new Date()), function(clientDate, serverDate) {
+                var client = decodeDate(clientDate);
+                var server = decodeDate(serverDate);
+                var now = new Date();
 
-              $('#ping').html('Ping: ' + (now.getTime() - client.getTime()).toString() + ' ms.<br/>' +
-                              'C2S: ' + (server.getTime() - client.getTime()).toString() + ' ms.<br/>'
-                              );
-            });
+                $('#ping').html('Ping: ' + (now.getTime() - client.getTime()).toString() + ' ms.<br/>' +
+                                'C2S: ' + (server.getTime() - client.getTime()).toString() + ' ms.<br/>'
+                                );
 
-            setTimeout(sendPing, 500);
-        }
-        sendPing();
+                setTimeout(sendPing, 100);
+              });
+          }
+          sendPing();
+        });
     });
 </script>
 </head>

@@ -37,7 +37,9 @@ class PingConnection(SocketConnection):
         return self.session.server.stats.dump()
 
 # Create tornadio router
-PingRouter = TornadioRouter(PingConnection)
+PingRouter = TornadioRouter(PingConnection,
+                            dict(enabled_protocols=['websocket', 'xhr-polling',
+                                                    'jsonp-polling', 'htmlfile']))
 
 # Create socket application
 application = web.Application(
@@ -50,8 +52,5 @@ application = web.Application(
 )
 
 if __name__ == "__main__":
-    import logging
-    logging.getLogger().setLevel(logging.DEBUG)
-
     # Create and start tornadio server
     SocketServer(application)

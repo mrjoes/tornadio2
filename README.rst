@@ -98,6 +98,12 @@ Multiplexed
 
 Ping and chat demo running through one connection. You can see it in ``examples/multiplexed`` directory.
 
+Stats
+^^^^^
+
+TornadIO2 collects some counters that you can use to troubleshoot your application performance.
+Example in ``examples/stats`` gives an idea how you can use these stats to plot realtime graph.
+
 RPC ping
 ^^^^^^^^
 

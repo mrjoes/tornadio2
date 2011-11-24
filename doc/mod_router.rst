@@ -9,7 +9,7 @@
 	^^^^^^
 
 	.. automethod:: TornadioRouter.__init__
-	.. automethod:: TornadioRouter.urls
+	.. autoattribute:: TornadioRouter.urls
 	.. automethod:: TornadioRouter.apply_routes
 
 	Sessions

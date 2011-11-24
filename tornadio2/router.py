@@ -57,33 +57,38 @@ class HandshakeHandler(preflight.PreflightHandler):
         self.server = server
 
     def get(self, version, *args, **kwargs):
-        # Only version 1 is supported now
-        if version != '1':
-            raise HTTPError(503, "Invalid socket.io protocol version")
+        try:
+            self.server.stats.connection_opened()
 
-        sess = self.server.create_session(self.request)
+            # Only version 1 is supported now
+            if version != '1':
+                raise HTTPError(503, "Invalid socket.io protocol version")
 
-        # TODO: Fix heartbeat timeout. For now, it is adding 5 seconds to the client timeout.
-        data = '%s:%d:%d:%s' % (
-            sess.session_id,
-            self.server.settings['heartbeat_interval'],
-            # TODO: Fix me somehow.
-            self.server.settings['xhr_polling_timeout'] + 5,
-            ','.join(t for t in self.server.settings.get('enabled_protocols'))
-            )
+            sess = self.server.create_session(self.request)
 
-        jsonp = self.get_argument('jsonp', None)
-        if jsonp is not None:
-            self.set_header('Content-Type', 'application/javascript; charset=UTF-8')
+            # TODO: Fix heartbeat timeout. For now, it is adding 5 seconds to the client timeout.
+            data = '%s:%d:%d:%s' % (
+                sess.session_id,
+                self.server.settings['heartbeat_interval'],
+                # TODO: Fix me somehow.
+                self.server.settings['xhr_polling_timeout'] + 5,
+                ','.join(t for t in self.server.settings.get('enabled_protocols'))
+                )
 
-            data = 'io.j[%s](%s);' % (jsonp, proto.json_dumps(data))
-        else:
-            self.set_header('Content-Type', 'text/plain; charset=UTF-8')
+            jsonp = self.get_argument('jsonp', None)
+            if jsonp is not None:
+                self.set_header('Content-Type', 'application/javascript; charset=UTF-8')
 
-        self.preflight()
+                data = 'io.j[%s](%s);' % (jsonp, proto.json_dumps(data))
+            else:
+                self.set_header('Content-Type', 'text/plain; charset=UTF-8')
 
-        self.write(data)
-        self.finish()
+            self.preflight()
+
+            self.write(data)
+            self.finish()
+        finally:
+            self.server.stats.connection_closed()
 
 
 class TornadioRouter(object):

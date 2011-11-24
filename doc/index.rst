@@ -21,6 +21,7 @@ Topics
    events
    acknowledgments
    gen
+   stats
    deployment
    bugs
    api

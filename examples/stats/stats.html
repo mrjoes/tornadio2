@@ -14,8 +14,11 @@
         });
 
         var graph_items = ['active_sessions',
-                           'avg_packets_sent',
-                           'avg_packets_recv'];
+                           'active_connections',
+                           'connections_ps',
+                           'packets_sent_ps',
+                           'packets_recv_ps'
+                           ];
 
         // Flot stuff
         var data = [], totalPoints = 60;
@@ -57,6 +60,7 @@
             var name = graph_items[i];
 
             res.push({
+              label: name,
               data: convertValues(name)
             });
           }
@@ -71,6 +75,23 @@
 
               plot.setData(prepareGraphData());
               plot.draw();
+
+              // Update table
+              var placeholder = $('#table');
+              placeholder.empty();
+
+              var table = $('<table/>');
+              for (var i in data)
+              {
+                var item = data[i];
+
+                $('<tr/>')
+                  .append($('<td/>').text(i))
+                  .append($('<td/>').text(item))
+                  .appendTo(placeholder);
+              }
+
+              table.appendTo(placeholder);
             });
 
             setTimeout(queryStats, 1000);
@@ -78,7 +99,7 @@
 
         var options = {
           series: { shadowSize: 0 },
-          yaxis: { min: 0, max: 100 },
+          yaxis: { min: 0, max: 200 },
           xaxis: { show: false }
         };
 
@@ -90,7 +111,10 @@
 </script>
 </head>
 <body>
-<h3>Connection stats!</h3>
- <div id="placeholder" style="width:600px;height:300px"></div>
+  <h3>Connection stats!</h3>
+  <div>
+   <div id="placeholder" style="width:600px;height:300px;float:left;"></div>
+   <div id="table"></div>
+  </div>
 </body>
 </html>

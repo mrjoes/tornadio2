@@ -49,16 +49,16 @@ class TornadioWebSocketHandler(WebSocketHandler):
         if self.session is None:
             raise tornado.HTTPError(401, "Invalid Session")
 
-        # Associate session handler
-        self.session.set_handler(self)
-        self.session.reset_heartbeat()
-
         if not self._is_active:
             # Need to check if websocket connection was really established by sending hearbeat packet
             # and waiting for response
             self.write_message(proto.heartbeat())
             self.server.io_loop.add_timeout(time.time() + 5, self._connection_check)
         else:
+            # Associate session handler
+            self.session.set_handler(self)
+            self.session.reset_heartbeat()
+
             # Flush messages, if any
             self.session.flush()
 
@@ -85,7 +85,11 @@ class TornadioWebSocketHandler(WebSocketHandler):
 
         # Mark that connection is active and flush any pending messages
         if not self._is_active:
+            # Associate session handler and flush queued messages
+            self.session.set_handler(self)
+            self.session.reset_heartbeat()
             self.session.flush()
+
             self._is_active = True
 
         try:

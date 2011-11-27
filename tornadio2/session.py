@@ -104,12 +104,12 @@ class Session(sessioncontainer.SessionBase):
                               request.arguments,
                               request.cookies)
 
+        # If everything is fine - continue
+        self.send_message(proto.connect())
+
         result = self.conn.on_open(info)
         if result is not None and not result:
             raise HTTPError(401)
-
-        # If everything is fine - continue
-        self.send_message(proto.connect())
 
         # Heartbeat related stuff
         self._heartbeat_timer = None
@@ -273,7 +273,7 @@ class Session(sessioncontainer.SessionBase):
         self._missed_heartbeats += 1
 
         # TODO: Configurable
-        if self._missed_heartbeats > 5:
+        if self._missed_heartbeats > 2:
             self.close()
 
     # Endpoints

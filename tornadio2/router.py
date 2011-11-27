@@ -47,6 +47,11 @@ DEFAULT_SETTINGS = {
                           'jsonp-polling', 'htmlfile'],
     # XHR-Polling request timeout, in seconds
     'xhr_polling_timeout': 20,
+    # Some antivirus software messed up with HTTP traffic and, as a result, websockets
+    # to port 80 stop to work. If you enable this setting, TornadIO will try to send
+    # ping packet and wait for response. If nothing will happen during 5 seconds,
+    # TornadIO considers connection not working.
+    'websocket_check': False,
     }
 
 

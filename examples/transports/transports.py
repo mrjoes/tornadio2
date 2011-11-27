@@ -48,7 +48,7 @@ class ChatConnection(tornadio2.conn.SocketConnection):
         self.participants.remove(self)
 
 # Create chat server
-ChatRouter = tornadio2.router.TornadioRouter(ChatConnection)
+ChatRouter = tornadio2.router.TornadioRouter(ChatConnection, dict(websocket_check=True))
 
 # Create application
 application = tornado.web.Application(

@@ -57,3 +57,25 @@ See related bug report: https://github.com/LearnBoost/socket.io-client/issues/33
 So, you can not expect query string parametes to be passed to your virtual connections and
 will have to structure your JS code, so first ``io.connect()`` will include anything you
 want to pass to the server.
+
+Windows and anti-virus software
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+It is known that some anti-virus software (I'm lookin at you, Avast) is messing up
+with websockets protocol if it is going through the port 80. Avast proxies all traffic
+through local proxy which does some on-the-fly traffic analysis and their proxy does
+not support websockets - all messages sent from server are queued in their proxy,
+connection is kept alive, etc.
+
+Unfortunately, socket.io does not support this situation and won't fallback to other
+protocol.
+
+There are few workarounds:
+1. Disable websockets for everyone (duh)
+2. Run TornadIO2 (or your proxy/load balancer) on two different ports and have simple logic
+   on client side to switch to another port if connection fails
+
+Socket.IO developers are aware of the problem and next socket.io version will provide
+official workaround.
+
+Here's more detailed article on the matter: `https://github.com/LearnBoost/socket.io/wiki/Socket.IO-and-firewall-software <https://github.com/LearnBoost/socket.io/wiki/Socket.IO-and-firewall-software>`_.

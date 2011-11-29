@@ -22,7 +22,7 @@ class SocketIOHandler(web.RequestHandler):
 
 
 class PingConnection(SocketConnection):
-    @event('ping')
+    @event
     def ping(self, client):
         now = datetime.datetime.now()
         return client, [now.hour, now.minute, now.second, now.microsecond / 1000]

@@ -22,7 +22,7 @@ class SocketIOHandler(web.RequestHandler):
 
 
 class PingConnection(SocketConnection):
-    @event('ping')
+    @event
     def ping(self, client, text):
         print 'Got %s from client' % text
 

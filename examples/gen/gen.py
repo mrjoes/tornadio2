@@ -30,7 +30,7 @@ class QueryConnection(SocketConnection):
 
         ioloop.IOLoop.instance().add_timeout(timedelta(seconds=3), finish)
 
-    @event('query')
+    @event
     def query(self, num):
         """Event implementation
 

@@ -26,14 +26,29 @@ import logging
 from tornadio2 import proto
 
 
-def event(name_or_f):
-    """Event handler decorator."""
-    if callable(name_or_f):
-        name_or_f._event_name = name_or_f.__name__
-        return name_or_f
+def event(name_or_func):
+    """Event handler decorator.
+
+    Can be used with event name or will automatically use function name
+    if not provided::
+
+        # Will handle 'foo' event
+        @event('foo')
+        def bar(self):
+            pass
+
+        # Will handle 'baz' event
+        @event
+        def baz(self):
+            pass
+    """
+
+    if callable(name_or_func):
+        name_or_func._event_name = name_or_func.__name__
+        return name_or_func
 
     def handler(f):
-        f._event_name = name_or_f
+        f._event_name = name_or_func
         return f
 
     return handler

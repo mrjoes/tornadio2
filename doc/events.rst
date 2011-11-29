@@ -39,6 +39,14 @@ To handle event on client side, use following code:
 However, take care - if method signature does not match (missing parameters, extra
 parameters, etc), your connection will blow up and self destruct.
 
+``event`` decorator can be used without parameter and it will use event handler name
+in this case::
+
+    class MyConnection(SocketConnection):
+        @event
+        def hello(self, name):
+            print 'Hello %s' % name
+
 If you don't like this event handling approach, just override ``on_event`` in your
 socket connection class and handle them by yourself:
 ::

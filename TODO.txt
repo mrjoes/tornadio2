@@ -1,2 +1,0 @@
-- Volatile messages
-- Send message with ACK

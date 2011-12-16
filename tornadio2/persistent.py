@@ -24,6 +24,7 @@ import logging
 import time
 
 import tornado
+from tornado.web import HTTPError
 from tornado import stack_context
 from tornado.websocket import WebSocketHandler
 
@@ -82,7 +83,7 @@ class TornadioWebSocketHandler(WebSocketHandler):
         """WebSocket open handler"""
         self.session = self.server.get_session(session_id)
         if self.session is None:
-            raise tornado.HTTPError(401, "Invalid Session")
+            raise HTTPError(401, "Invalid Session")
 
         if not self._is_active:
             # Need to check if websocket connection was really established by sending hearbeat packet

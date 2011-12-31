@@ -9,12 +9,12 @@ thinking about scalability, deployment options, etc.
 
 Most of the Tornado servers are deployed behind the nginx, which also used to serve static content. Unfortunately,
 older versions of the nginx did not support HTTP 1.1 and as a result, proxying of the websocket connections
-did not work. However, starting from ngingx 1.1 there's support of HTTP 1.1 protocol and websocket proxying
+did not work. However, starting from nginx 1.1 there's support of HTTP 1.1 protocol and websocket proxying
 works. You can get more information `here <https://github.com/LearnBoost/socket.io/wiki/Nginx-and-Socket.io>`_.
 
 Alternative solution is to use `HAProxy <http://haproxy.1wt.eu/>`_.
 Sample HAProxy configuration file can be found `here <http://stackoverflow.com/questions/4360221/haproxy-websocket-disconnection/4737648#4737648>`_.
-You can hide your application and TornadIO instances behind one HAProxy instance running one one port
+You can hide your application and TornadIO instances behind one HAProxy instance running on one port
 to avoid cross-domain AJAX calls, which ensures greater compatibility.
 
 However, HAProxy does not work on Windows, so if you plan to deploy your solution on Windows platform,

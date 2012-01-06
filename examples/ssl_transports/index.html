@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+  <script src="socket.io.js"></script>
+  <script>
+    WEB_SOCKET_SWF_LOCATION = 'WebSocketMain.swf';
+  </script>
+  <script>
+    var conn = null;
+    $(function() {
+
+      function log(msg) {
+        var control = $('#log');
+        control.html(control.html() + msg + '<br/>');
+        control.scrollTop(control.scrollTop() + 1000);
+      }
+
+      function connect() {
+        //disconnect();
+
+        // Socket.IO magic, $.map does not work and crashes socket.io.
+        var transports = [];
+        $('#protocols input:checked').each(function(){
+            return transports.push($(this).attr('id'));
+        });
+
+        // Hack to work around bug 251, I really hope it is going to be fixed.
+        // https://github.com/LearnBoost/socket.io-client/issues/251
+        // Alternative way to do full reconnect is to pass 'force new connection',
+        // but you will lose multiplexing.
+        io.j = [];
+        io.sockets = [];
+        conn = io.connect('https://' + window.location.host + '/', {
+                  //'force new connection': true,
+                  transports: transports,
+                  rememberTransport: false
+               });
+
+        log('Connecting...');
+
+        conn.on('connect', function() {
+          log('Connected.');
+          update_ui();
+        });
+
+        conn.on('message', function(data) {
+          log('Received: ' + data);
+        });
+
+        conn.on('disconnect', function(data) {
+          log('Disconnected.');
+          conn = null;
+          update_ui();
+        });
+      }
+
+      function disconnect() {
+        if (conn != null) {
+          log('Disconnecting...');
+
+          conn.disconnect();
+          conn = null;
+
+          update_ui();
+        }
+      }
+
+      function update_ui() {
+        var msg = '';
+
+        if (conn == null || !conn.socket || !conn.socket.connected) {
+          msg = 'disconnected';
+          $('#connect').text('Connect');
+        } else {
+          msg = 'connected (' + conn.socket.transport.name + ')';
+          $('#connect').text('Disconnect');
+        }
+
+        $('#status').text(msg);
+      }
+
+      $('#connect').click(function() {
+        if (conn == null) {
+          connect();
+        } else {
+          disconnect();
+        }
+
+        update_ui();
+        return false;
+      });
+
+      $('form').submit(function() {
+        var text = $('#text').val();
+        log('Sending: ' + text);
+        conn.send(text);
+        $('#text').val('').focus();
+        return false;
+      });
+    });
+</script>
+</head>
+<body>
+<h3>SSL Protocol test!</h3>
+<div id="protocols" style="float: right">
+  <ul>
+    <li>
+      <input id="websocket" type="checkbox" value="WebSocket" checked="checked"></input>
+      <label for="websocket">websocket</label>
+    </li>
+    <li>
+      <input id="flashsocket" type="checkbox" value="FlashSocket" checked="checked"></input>
+      <label for="flashsocket">flashsocket</label>
+    </li>
+    <li>
+      <input id="xhr-polling" type="checkbox" value="XHR-Polling" checked="checked"></input>
+      <label for="xhr-polling">xhr-polling</label>
+    </li>
+    <li>
+      <input id="htmlfile" type="checkbox" value="HtmlFile" checked="checked"></input>
+      <label for="htmlfile">htmlfile</label>
+    </li>
+    <li>
+      <input id="jsonp-polling" type="checkbox" value="JSONP Polling" checked="checked"></input>
+      <label for="jsonp-polling">jsonp-polling</label>
+    </li>
+  </ul>
+</div>
+<div>
+  <a id="connect" href="#">Connect</a>&nbsp;|&nbsp;Status: <span id="status">disconnected</span>
+</div>
+<div id="log" style="width: 60em; height: 20em; overflow:auto; border: 1px solid black">
+</div>
+<form id="chatform">
+  <input id="text" type="text" />
+  <input type="submit" />
+</form>
+</body>
+</html>

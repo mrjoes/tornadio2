@@ -107,10 +107,6 @@ class Session(sessioncontainer.SessionBase):
         # If everything is fine - continue
         self.send_message(proto.connect())
 
-        result = self.conn.on_open(info)
-        if result is not None and not result:
-            raise HTTPError(401)
-
         # Heartbeat related stuff
         self._heartbeat_timer = None
         self._heartbeat_interval = self.server.settings['heartbeat_interval'] * 1000
@@ -118,6 +114,10 @@ class Session(sessioncontainer.SessionBase):
 
         # Endpoints
         self.endpoints = dict()
+
+        result = self.conn.on_open(info)
+        if result is not None and not result:
+            raise HTTPError(401)
 
     # Session callbacks
     def on_delete(self, forced):

@@ -146,7 +146,7 @@ class TornadioWebSocketHandler(WebSocketHandler):
             for m in messages:
                 self.write_message(m)
         except IOError:
-            if self.client_terminated:
+            if self.ws_connection and self.ws_connection.client_terminated:
                 logging.debug('Dropping active websocket connection due to IOError.')
 
             self._detach()

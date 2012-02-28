@@ -151,7 +151,7 @@ class SocketConnection(object):
         """Default on_message handler. Must be overridden in your application"""
         raise NotImplementedError()
 
-    def on_event(self, name, *args, **kwargs):
+    def on_event(self, name, args=[], kwargs=dict()):
         """Default on_event handler.
 
         By default, it uses decorator-based approach to handle events,

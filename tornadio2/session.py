@@ -301,7 +301,8 @@ class Session(sessioncontainer.SessionBase):
 
         info = ConnectionInfo(self.remote_ip, args, dict())
 
-        conn.on_open(info)
+        if conn.on_open(info) == False:
+            self.disconnect_endpoint(endpoint)
 
     def disconnect_endpoint(self, endpoint):
         """Disconnect endpoint

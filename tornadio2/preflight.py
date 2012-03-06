@@ -40,7 +40,7 @@ class PreflightHandler(RequestHandler):
                                 self.request.headers['Origin'])
 
                 if 'Cookie' in self.request.headers:
-                    self.set_header('Access-Control-Allow-Credentials', True)
+                    self.set_header('Access-Control-Allow-Credentials', 'true')
 
                 self.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
 

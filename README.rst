@@ -44,7 +44,7 @@ If you're familiar with Tornado, do following to add support for Socket.IO to yo
 
     class MyConnection(tornadio2.SocketConnection):
         def on_message(self, message):
-           pass
+            pass
 
 2. Create TornadIO2 server for your connection::
 
@@ -52,9 +52,9 @@ If you're familiar with Tornado, do following to add support for Socket.IO to yo
 
 3. Add your handler routes to the Tornado application::
 
-  application = tornado.web.Application(
-    MyRouter.urls,
-    socket_io_port = 8000)
+    application = tornado.web.Application(
+        MyRouter.urls,
+        socket_io_port = 8000)
 
 4. Start your application
 5. You have your `socket.io` server running at port 8000. Simple, right?
@@ -67,8 +67,8 @@ simplifies start of your TornadIO server.
 
 To start it, do following (assuming you created application object before)::
 
-  if __name__ == "__main__":
-    socketio_server = SocketServer(application)
+    if __name__ == "__main__":
+        socketio_server = SocketServer(application)
 
 SocketServer will automatically start Flash policy server, if required.
 

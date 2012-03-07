@@ -22,6 +22,7 @@
 """
 import logging
 import time
+import traceback
 
 import tornado
 from tornado.web import HTTPError
@@ -120,6 +121,10 @@ class TornadioWebSocketHandler(WebSocketHandler):
         # Tracking
         self.server.stats.on_packet_recv(1)
 
+        # Fix for late messages (after connection was closed)
+        if not self.session:
+            return
+
         # Mark that connection is active and flush any pending messages
         if not self._is_active:
             # Associate session handler and flush queued messages
@@ -129,11 +134,16 @@ class TornadioWebSocketHandler(WebSocketHandler):
 
             self._is_active = True
 
+        self.session.delay_heartbeat()
+
         try:
             self.session.raw_message(message)
-        except Exception:
+        except Exception, ex:
+            logging.error('Failed to handle message: ' + traceback.format_exc(ex))
+
             # Close session on exception
-            self.session.close()
+            if self.session is not None:
+                self.session.close()
 
     def on_close(self):
         self._detach()

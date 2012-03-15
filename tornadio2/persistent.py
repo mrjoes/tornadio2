@@ -177,6 +177,10 @@ class TornadioWebSocketHandler(WebSocketHandler):
             logging.debug('Exception', exc_info=(type, value, traceback))
             return True
 
+    # Websocket overrides
+    def allow_draft76(self):
+        return True
+
 
 class TornadioFlashSocketHandler(TornadioWebSocketHandler):
     # Transport name

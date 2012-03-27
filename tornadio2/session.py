@@ -230,6 +230,9 @@ class Session(sessioncontainer.SessionBase):
                     # Stats
                     self.server.stats.session_closed()
 
+                # Stop heartbeats
+                self.stop_heartbeat()
+
                 # Send disconnection message
                 self.send_message(proto.disconnect())
 

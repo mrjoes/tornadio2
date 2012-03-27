@@ -56,7 +56,9 @@ class TornadioPollingHandlerBase(preflight.PreflightHandler):
     def _detach(self):
         """Detach from the session"""
         if self.session:
-            self.session.stop_heartbeat()
+            if not self.server.settings['global_heartbeats']:
+                self.session.stop_heartbeat()
+
             self.session.remove_handler(self)
 
             self.session = None
@@ -226,8 +228,9 @@ class TornadioHtmlFileHandler(TornadioPollingHandlerBase):
         # Dump any queued messages
         self.session.flush()
 
-        # We need heartbeats
-        self.session.reset_heartbeat()
+        # If hearbeats were not started by `HandshakeHandler`, start them.
+        if not self.server.settings['global_heartbeats']:
+            self.session.reset_heartbeat()
 
     def send_messages(self, messages):
         # Tracking
@@ -241,7 +244,8 @@ class TornadioHtmlFileHandler(TornadioPollingHandlerBase):
             )
         self.flush()
 
-        self.session.delay_heartbeat()
+        if not self.server.settings['global_heartbeats']:
+            self.session.delay_heartbeat()
 
     def session_closed(self):
         try:

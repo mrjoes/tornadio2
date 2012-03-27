@@ -90,7 +90,8 @@ class TornadioWebSocketHandler(WebSocketHandler):
             # Need to check if websocket connection was really established by sending hearbeat packet
             # and waiting for response
             self.write_message(proto.heartbeat())
-            self.server.io_loop.add_timeout(time.time() + 5, self._connection_check)
+            self.server.io_loop.add_timeout(time.time() + self.server.settings['client_timeout'],
+                                            self._connection_check)
         else:
             # Associate session handler
             self.session.set_handler(self)
@@ -134,7 +135,8 @@ class TornadioWebSocketHandler(WebSocketHandler):
 
             self._is_active = True
 
-        self.session.delay_heartbeat()
+        if not self.server.settings['global_heartbeats']:
+            self.session.delay_heartbeat()
 
         try:
             self.session.raw_message(message)

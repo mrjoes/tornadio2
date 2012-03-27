@@ -52,6 +52,13 @@ DEFAULT_SETTINGS = {
     # ping packet and wait for response. If nothing will happen during 5 seconds,
     # TornadIO considers connection not working.
     'websocket_check': False,
+    # Starting from socket.io 0.9.2, client started verifying heartbeats for all transports.
+    # Disable this if you're on 0.9.1 or lower, as this settings will significantly increase
+    # your server load for clients with polling transports.
+    'global_heartbeats': True,
+    # Client timeout adjustment in seconds. If you see your clients disconnect without a
+    # reason, increase this value.
+    'client_timeout': 5
     }
 
 
@@ -71,14 +78,21 @@ class HandshakeHandler(preflight.PreflightHandler):
 
             sess = self.server.create_session(self.request)
 
+            settings = self.server.settings
+
             # TODO: Fix heartbeat timeout. For now, it is adding 5 seconds to the client timeout.
             data = '%s:%d:%d:%s' % (
                 sess.session_id,
-                self.server.settings['heartbeat_interval'],
+                # TODO: Fix me somehow a well. 0.9.2 will drop connection is no
+                # heartbeat was sent over
+                settings['heartbeat_interval'] + settings['client_timeout'],
                 # TODO: Fix me somehow.
-                self.server.settings['xhr_polling_timeout'] + 5,
+                settings['xhr_polling_timeout'] + settings['client_timeout'],
                 ','.join(t for t in self.server.settings.get('enabled_protocols'))
                 )
+
+            if self.server.settings['global_heartbeats']:
+                sess.reset_heartbeat()
 
             jsonp = self.get_argument('jsonp', None)
             if jsonp is not None:

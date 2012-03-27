@@ -22,6 +22,7 @@
 """
 import time
 import logging
+from inspect import ismethod, getmembers
 
 from tornadio2 import proto
 
@@ -57,17 +58,10 @@ def event(name_or_func):
 class EventMagicMeta(type):
     """Event handler metaclass"""
     def __init__(cls, name, bases, attrs):
-        # Manage events
-        events = {}
-
-        for a in attrs:
-            attr = getattr(cls, a)
-            name = getattr(attr, '_event_name', None)
-
-            if name:
-                events[name] = attr
-
-        setattr(cls, '_events', events)
+        # find events, also in bases
+        is_event = lambda x: ismethod(x) and hasattr(x, '_event_name')
+        events = [(e._event_name, e) for _, e in getmembers(cls, is_event)]
+        setattr(cls, '_events', dict(events))
 
         # Call base
         super(EventMagicMeta, cls).__init__(name, bases, attrs)

@@ -19,7 +19,7 @@
     ~~~~~~~~~
 """
 
-__version__ = (0, 0, 1)
+__version__ = (0, 0, 3)
 
 from tornadio2.conn import SocketConnection, event
 from tornadio2.router import TornadioRouter

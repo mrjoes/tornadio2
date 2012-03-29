@@ -43,6 +43,7 @@ class TornadioWebSocketHandler(WebSocketHandler):
         self.session = None
 
         self._is_active = not self.server.settings['websocket_check']
+        self._global_heartbeats = self.server.settings['global_heartbeats']
 
         logging.debug('Initializing %s handler.' % self.name)
 
@@ -135,7 +136,7 @@ class TornadioWebSocketHandler(WebSocketHandler):
 
             self._is_active = True
 
-        if not self.server.settings['global_heartbeats']:
+        if not self._global_heartbeats:
             self.session.delay_heartbeat()
 
         try:

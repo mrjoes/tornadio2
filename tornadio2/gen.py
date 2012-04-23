@@ -17,7 +17,7 @@
     tornadio2.gen
     ~~~~~~~~~~~~~
 
-    Generator-based interface to maek it easier to work in an asynchronous environment.
+    Generator-based interface to make it easier to work in an asynchronous environment.
 """
 
 import functools

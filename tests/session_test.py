@@ -76,9 +76,13 @@ class DummyConnection(conn.SocketConnection):
         self.incoming.append(message)
         self.send(message)
 
-    def on_event(self, name, *args, **kwargs):
-        self.events.append((name, kwargs))
-        self.emit(name, **kwargs)
+    def on_event(self, name, args=[], kwargs=dict()):
+        if args:
+            self.events.append((name, args))
+            self.emit(name, *args)        
+        else:
+            self.events.append((name, kwargs))
+            self.emit(name, **kwargs)
         return name
 
     def on_close(self):

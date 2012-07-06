@@ -296,6 +296,9 @@ class Session(sessioncontainer.SessionBase):
             return
 
         conn = conn_class(self, endpoint)
+        old_conn = self.endpoints.get(endpoint, None)
+        if old_conn is not None:
+            self.disconnect_endpoint(endpoint)
         self.endpoints[endpoint] = conn
 
         self.send_message(proto.connect(endpoint))

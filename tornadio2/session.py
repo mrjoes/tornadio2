@@ -290,13 +290,15 @@ class Session(sessioncontainer.SessionBase):
 
         endpoint = urldata.path
 
-        conn_class = self.conn.get_endpoint(endpoint)
-        if conn_class is None:
-            logging.error('There is no handler for endpoint %s' % endpoint)
-            return
+        conn = self.endpoints.get(endpoint, None)
+        if conn is None:
+            conn_class = self.conn.get_endpoint(endpoint)
+            if conn_class is None:
+                logging.error('There is no handler for endpoint %s' % endpoint)
+                return
 
-        conn = conn_class(self, endpoint)
-        self.endpoints[endpoint] = conn
+            conn = conn_class(self, endpoint)
+            self.endpoints[endpoint] = conn
 
         self.send_message(proto.connect(endpoint))
 

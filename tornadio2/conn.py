@@ -209,7 +209,7 @@ class SocketConnection(object):
         """Default on_close handler."""
         pass
 
-    def send(self, message, callback=None):
+    def send(self, message, callback=None, force_json=False):
         """Send message to the client.
 
         `message`
@@ -218,6 +218,10 @@ class SocketConnection(object):
             Optional callback. If passed, callback will be called
             when client received sent message and sent acknowledgment
             back.
+        `force_json`
+            Optional argument. If set to True (and message is a string)
+            then the message type will be JSON (Type 4 in socket_io protocol).
+            This is what you want, when you send already json encoded strings.
         """
         if self.is_closed:
             return
@@ -225,9 +229,9 @@ class SocketConnection(object):
         if callback is not None:
             msg = proto.message(self.endpoint,
                                 message,
-                                self.queue_ack(callback, message))
+                                self.queue_ack(callback, message), force_json)
         else:
-            msg = proto.message(self.endpoint, message)
+            msg = proto.message(self.endpoint, message, force_json=force_json)
 
         self.session.send_message(msg)
 

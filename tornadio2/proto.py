@@ -79,7 +79,7 @@ def heartbeat():
     return u'2::'
 
 
-def message(endpoint, msg, message_id=None):
+def message(endpoint, msg, message_id=None, force_json=False):
     """Generate message packet.
 
     `endpoint`
@@ -89,24 +89,30 @@ def message(endpoint, msg, message_id=None):
         If object or dictionary, will json encode and send as is.
     `message_id`
         Optional message id for ACK
+    `force json`
+        Disregard msg type and send the message with JSON type. Usefull for already
+        JSON encoded strings.
     """
-    if (not isinstance(msg, (unicode, str)) and
-        isinstance(msg, (object, dict))):
-        if msg is not None:
-            return u'4:%s:%s:%s' % (
-                message_id or '',
-                endpoint or '',
-                json.dumps(msg, **json_decimal_args)
-                )
-        else:
-            # TODO: Log something?
-            return u''
+    if msg is None:
+        # TODO: Log something ?
+        return u''
+
+    packed_message_tpl = u"%(kind)s:%(message_id)s:%(endpoint)s:%(msg)s"
+    packed_data = {'endpoint': endpoint or u'',
+                   'message_id': message_id or u''}
+
+    # Trying to send a dict over the wire ?
+    if not isinstance(msg, (unicode, str)) and isinstance(msg, (dict, object)):
+        packed_data.update({'kind': JSON,
+                            'msg': json.dumps(msg, **json_decimal_args)})
+
+    # for all other classes, including objects. Call str(obj)
+    # and respect forced JSON if requested
     else:
-        return u'3:%s:%s:%s' % (
-            message_id or u'',
-            endpoint or u'',
-            msg if isinstance(msg, unicode) else str(msg).decode('utf-8')
-            )
+        packed_data.update({'kind': MESSAGE if not force_json else JSON,
+                            'msg': msg if isinstance(msg, unicode) else str(msg).decode('utf-8')})
+
+    return packed_message_tpl % packed_data
 
 
 def event(endpoint, name, message_id, *args, **kwargs):

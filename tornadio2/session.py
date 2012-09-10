@@ -302,8 +302,6 @@ class Session(sessioncontainer.SessionBase):
 
         self.send_message(proto.connect(endpoint))
 
-        args = urlparse.parse_qs(urldata.query)
-
         if conn.on_open(self.info) == False:
             self.disconnect_endpoint(endpoint)
 

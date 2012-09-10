@@ -100,7 +100,7 @@ class Session(sessioncontainer.SessionBase):
         self.conn = conn(self)
 
         # Call on_open.
-        info = ConnectionInfo(request.remote_ip,
+        self.info = ConnectionInfo(request.remote_ip,
                               request.arguments,
                               request.cookies)
 
@@ -115,7 +115,7 @@ class Session(sessioncontainer.SessionBase):
         # Endpoints
         self.endpoints = dict()
 
-        result = self.conn.on_open(info)
+        result = self.conn.on_open(self.info)
         if result is not None and not result:
             raise HTTPError(401)
 
@@ -304,9 +304,7 @@ class Session(sessioncontainer.SessionBase):
 
         args = urlparse.parse_qs(urldata.query)
 
-        info = ConnectionInfo(self.remote_ip, args, dict())
-
-        if conn.on_open(info) == False:
+        if conn.on_open(self.info) == False:
             self.disconnect_endpoint(endpoint)
 
     def disconnect_endpoint(self, endpoint):

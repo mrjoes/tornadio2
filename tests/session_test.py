@@ -23,7 +23,8 @@ class DummyServer(object):
                 heartbeat_interval=12,
                 enabled_protocols=['websocket', 'flashsocket', 'xhr-polling',
                                    'jsonp-polling', 'htmlfile'],
-                xhr_polling_timeout=20
+                xhr_polling_timeout=20,
+                verify_remote_ip=True,
         )
         self.stats = stats.StatsCollector()
 
@@ -79,7 +80,7 @@ class DummyConnection(conn.SocketConnection):
     def on_event(self, name, args=[], kwargs=dict()):
         if args:
             self.events.append((name, args))
-            self.emit(name, *args)        
+            self.emit(name, *args)
         else:
             self.events.append((name, kwargs))
             self.emit(name, **kwargs)

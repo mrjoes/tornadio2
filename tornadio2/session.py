@@ -145,7 +145,7 @@ class Session(sessioncontainer.SessionBase):
             return False
 
         # If IP address don't match - refuse connection
-        if handler.request.remote_ip != self.remote_ip:
+        if self.server.settings['verify_remote_ip'] and handler.request.remote_ip != self.remote_ip:
             logging.error('Attempted to attach to session %s (%s) from different IP (%s)' % (
                           self.session_id,
                           self.remote_ip,

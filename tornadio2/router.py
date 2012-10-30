@@ -58,7 +58,12 @@ DEFAULT_SETTINGS = {
     'global_heartbeats': True,
     # Client timeout adjustment in seconds. If you see your clients disconnect without a
     # reason, increase this value.
-    'client_timeout': 5
+    'client_timeout': 5,
+    # Verify remote IP. May want to disable this for some setups. Some networks send traffic
+    # from same client, different IP each time. If you set this to False, TornadIO will not
+    # check the session ID against IP address. This has consequences for spoofing sessions and
+    # so on, so use with extreme caution.
+    'verify_remote_ip': True,
     }
 
 

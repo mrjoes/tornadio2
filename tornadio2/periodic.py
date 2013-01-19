@@ -25,6 +25,9 @@ import time
 import logging
 
 
+logger = logging.getLogger('tornadio2.periodic')
+
+
 class Callback(object):
     """Custom implementation of the Tornado.Callback with support
     of callback timeout delays.
@@ -83,7 +86,7 @@ class Callback(object):
         except (KeyboardInterrupt, SystemExit):
             raise
         except:
-            logging.error("Error in periodic callback", exc_info=True)
+            logger.error("Error in periodic callback", exc_info=True)
 
         if self._running:
             self.start(next_call)

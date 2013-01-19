@@ -22,6 +22,10 @@
 """
 import logging
 
+
+logger = logging.getLogger('tornadio2.proto')
+
+
 try:
     import simplejson as json
     json_decimal_args = {"use_decimal": True}
@@ -136,7 +140,7 @@ def event(endpoint, name, message_id, *args, **kwargs):
             )
 
         if kwargs:
-            logging.error('Can not generate event() with args and kwargs.')
+            logger.error('Can not generate event() with args and kwargs.')
     else:
         evt = dict(
             name=name,

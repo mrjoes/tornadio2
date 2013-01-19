@@ -32,6 +32,9 @@ from tornado.websocket import WebSocketHandler
 from tornadio2 import proto
 
 
+logger = logging.getLogger('tornadio2.persistent')
+
+
 class TornadioWebSocketHandler(WebSocketHandler):
     """Websocket protocol handler"""
 
@@ -45,7 +48,7 @@ class TornadioWebSocketHandler(WebSocketHandler):
         self._is_active = not self.server.settings['websocket_check']
         self._global_heartbeats = self.server.settings['global_heartbeats']
 
-        logging.debug('Initializing %s handler.' % self.name)
+        logger.debug('Initializing %s handler.' % self.name)
 
     # Additional verification of the websocket handshake
     # For now it will stay here, till https://github.com/facebook/tornado/pull/415
@@ -142,7 +145,7 @@ class TornadioWebSocketHandler(WebSocketHandler):
         try:
             self.session.raw_message(message)
         except Exception, ex:
-            logging.error('Failed to handle message: ' + traceback.format_exc(ex))
+            logger.error('Failed to handle message: ' + traceback.format_exc(ex))
 
             # Close session on exception
             if self.session is not None:
@@ -160,7 +163,7 @@ class TornadioWebSocketHandler(WebSocketHandler):
                 self.write_message(m)
         except IOError:
             if self.ws_connection and self.ws_connection.client_terminated:
-                logging.debug('Dropping active websocket connection due to IOError.')
+                logger.debug('Dropping active websocket connection due to IOError.')
 
             self._detach()
 
@@ -168,7 +171,7 @@ class TornadioWebSocketHandler(WebSocketHandler):
         try:
             self.close()
         except Exception:
-            logging.debug('Exception', exc_info=True)
+            logger.debug('Exception', exc_info=True)
         finally:
             self._detach()
 
@@ -177,7 +180,7 @@ class TornadioWebSocketHandler(WebSocketHandler):
             self.server.io_loop.add_callback(self.on_connection_close)
 
             # raise (type, value, traceback)
-            logging.debug('Exception', exc_info=(type, value, traceback))
+            logger.debug('Exception', exc_info=(type, value, traceback))
             return True
 
     # Websocket overrides

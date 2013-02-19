@@ -27,6 +27,9 @@ from inspect import ismethod, getmembers
 from tornadio2 import proto
 
 
+logger = logging.getLogger('tornadio2.conn')
+
+
 def event(name_or_func):
     """Event handler decorator.
 
@@ -194,16 +197,16 @@ class SocketConnection(object):
                     return handler(self, **kwargs)
             except TypeError:
                 if args:
-                    logging.error(('Attempted to call event handler %s ' +
+                    logger.error(('Attempted to call event handler %s ' +
                                   'with %s arguments.') % (handler,
                                                            repr(args)))
                 else:
-                    logging.error(('Attempted to call event handler %s ' +
+                    logger.error(('Attempted to call event handler %s ' +
                                   'with %s arguments.') % (handler,
                                                            repr(kwargs)))
                 raise
         else:
-            logging.error('Invalid event name: %s' % name)
+            logger.error('Invalid event name: %s' % name)
 
     def on_close(self):
         """Default on_close handler."""
@@ -295,7 +298,7 @@ class SocketConnection(object):
 
             callback(message, ack_data)
         else:
-            logging.error('Received invalid msg_id for ACK: %s' % msg_id)
+            logger.error('Received invalid msg_id for ACK: %s' % msg_id)
 
     # Endpoint factory
     def get_endpoint(self, endpoint):

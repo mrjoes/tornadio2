@@ -30,6 +30,9 @@ from tornado.httpserver import HTTPServer
 from tornadio2.flashserver import FlashPolicyServer
 
 
+logger = logging.getLogger('tornadio2.server')
+
+
 class SocketServer(HTTPServer):
     """HTTP Server which does some configuration and automatic setup
     of Socket.IO based on configuration.
@@ -82,14 +85,14 @@ class SocketServer(HTTPServer):
                             xheaders,
                             ssl_options)
 
-        logging.info('Starting up tornadio server on port \'%s\'',
+        logger.info('Starting up tornadio server on port \'%s\'',
                      socket_io_port)
 
         self.listen(socket_io_port, socket_io_address)
 
         if flash_policy_file is not None and flash_policy_port is not None:
             try:
-                logging.info('Starting Flash policy server on port \'%d\'',
+                logger.info('Starting Flash policy server on port \'%d\'',
                              flash_policy_port)
 
                 FlashPolicyServer(
@@ -97,8 +100,8 @@ class SocketServer(HTTPServer):
                     port=flash_policy_port,
                     policy_file=flash_policy_file)
             except Exception, ex:
-                logging.error('Failed to start Flash policy server: %s', ex)
+                logger.error('Failed to start Flash policy server: %s', ex)
 
         if auto_start:
-            logging.info('Entering IOLoop...')
+            logger.info('Entering IOLoop...')
             io_loop.start()

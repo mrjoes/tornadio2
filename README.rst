@@ -6,11 +6,11 @@ TornadIO2
 Disclaimer
 ----------
 
-Unfortunately, Socket.IO 0.x branch is abandoned, there are huge amount of bugs and nothing getting fixed. I would suggest to look at alternative 
+Unfortunately, Socket.IO 0.8 branch is abandoned, there are huge amount of bugs and nothing getting fixed. I would suggest to look at alternative 
 options, for example `SockJS <http://github.com/sockjs/>`. There's `sockjs-tornado <http://github.com/mrjoes/sockjs-tornado/>` too.
 I don't plan to support TornadIO2 anymore, assuming that parent library is no longer maintained.
 
-If you still want to try Socket.IO with Python, TornadIO2 is quite stable and used in production.
+If you still want to try Socket.IO 0.8.x with Python, TornadIO2 is quite stable and used in production.
 
 Contributors
 ------------
